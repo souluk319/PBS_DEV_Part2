@@ -8,14 +8,15 @@ export default function SharedLandingSwitcher({ activeTab }: { activeTab: Shared
       <div>
         <div className="shared-shell-label">
           <Layers3 size={16} />
-          <span>Shared Entry Shell</span>
+          <span>Shared Service Shell</span>
         </div>
         <h1 className="shared-shell-title">
-          One landing, two product lanes.
+          One service, two expert branches.
         </h1>
         <p className="shared-shell-description">
-          루트 랜딩은 공유하지만 PBS의 runtime truth와 route ownership은 그대로 유지합니다.
-          partner 기능은 sibling namespace로 유입되고, PBS core surface는 기존 경로를 계속 사용합니다.
+          PlayBook Studio는 메인 랜딩을 유지하고, Playbook과 Studio Ops를 같은 서비스 안에서
+          분기합니다. PBS runtime truth와 route ownership은 유지하고, Studio Ops는 compatibility
+          lane을 통해 단계적으로 통합합니다.
         </p>
       </div>
       <div className="shared-shell-tabs" aria-label="Product lane selector">
@@ -24,14 +25,14 @@ export default function SharedLandingSwitcher({ activeTab }: { activeTab: Shared
           className={`shared-shell-tab ${activeTab === 'pbs' ? 'is-active' : ''}`}
         >
           <Sparkles size={16} />
-          <span>PBS Lane</span>
+          <span>Playbook</span>
         </Link>
         <Link
           to={buildSharedLandingHref('partner')}
           className={`shared-shell-tab ${activeTab === 'partner' ? 'is-active' : ''}`}
         >
           <Layers3 size={16} />
-          <span>Partner Lane</span>
+          <span>Studio Ops</span>
         </Link>
       </div>
     </div>

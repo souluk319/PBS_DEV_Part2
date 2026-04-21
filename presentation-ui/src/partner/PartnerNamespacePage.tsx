@@ -1,4 +1,4 @@
-import { ArrowLeftRight, ShieldCheck, SplitSquareVertical } from 'lucide-react';
+import { ArrowLeftRight, ExternalLink, FolderGit2, PlaySquare, ShieldCheck, SplitSquareVertical } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { buildSharedLandingHref } from '../app/routes';
 import './PartnerNamespacePage.css';
@@ -7,13 +7,24 @@ type PartnerNamespacePageProps = {
   eyebrow: string;
   title: string;
   description: string;
+  teammatePath: string;
+  launchLabel: string;
+  highlights?: string[];
 };
+
+const DEFAULT_TEAMMATE_APP_URL = 'http://127.0.0.1:4174';
 
 export default function PartnerNamespacePage({
   eyebrow,
   title,
   description,
+  teammatePath,
+  launchLabel,
+  highlights = [],
 }: PartnerNamespacePageProps) {
+  const teammateBaseUrl = (import.meta.env.VITE_TEAMMATE_APP_URL || DEFAULT_TEAMMATE_APP_URL).trim().replace(/\/$/, '');
+  const launchUrl = `${teammateBaseUrl}${teammatePath}`;
+
   return (
     <div className="partner-namespace-page">
       <div className="partner-namespace-shell">
@@ -26,25 +37,89 @@ export default function PartnerNamespacePage({
           <span className="partner-namespace-eyebrow">{eyebrow}</span>
           <h1 className="partner-namespace-title">{title}</h1>
           <p className="partner-namespace-description">{description}</p>
+          <div className="partner-namespace-actions">
+            <a href={launchUrl} target="_blank" rel="noreferrer" className="partner-namespace-primary">
+              <PlaySquare size={18} />
+              <span>{launchLabel}</span>
+            </a>
+            <a href="https://github.com/JungyuOO/RAG_Task" target="_blank" rel="noreferrer" className="partner-namespace-secondary">
+              <ExternalLink size={18} />
+              <span>Open compatibility repo</span>
+            </a>
+          </div>
         </section>
 
         <div className="partner-namespace-grid">
           <section className="glass-panel">
             <SplitSquareVertical size={22} />
-            <h3>Namespace isolation</h3>
+            <h3>Launch target</h3>
             <p>
-              이 lane은 partner 기능을 위한 sibling subtree이며, PBS core route family와
-              citation deep link를 덮어쓰지 않습니다.
+              Studio Ops compatibility app는 별도 포트에서 실행하고, PBS는 이 subtree에서 진입과 shell 연결을 담당합니다.
             </p>
+            <code className="partner-namespace-code">{launchUrl}</code>
           </section>
           <section className="glass-panel">
             <ShieldCheck size={22} />
             <h3>Truth isolation</h3>
             <p>
-              shared landing은 entry shell만 공유합니다. runtime truth, corpus, citation map ownership은 PBS에 남습니다.
+              shared landing은 entry shell만 공유합니다. PBS 문서 truth와 Studio Ops operational state는 분리 유지합니다.
             </p>
           </section>
+          <section className="glass-panel">
+            <FolderGit2 size={22} />
+            <h3>Compatibility subtree</h3>
+            <p>
+              Studio Ops compatibility source는 integration repo 내부
+              <strong> `teammates/rag-task` </strong>
+              아래에 그대로 보존했습니다.
+            </p>
+            <code className="partner-namespace-code">teammates/rag-task/apps/web</code>
+            <code className="partner-namespace-code">teammates/rag-task/apps/api</code>
+          </section>
+          <section className="glass-panel">
+            <PlaySquare size={22} />
+            <h3>Run notes</h3>
+            <p>
+              compatibility preview가 필요하면 web은 별도 포트에서 실행하고, PBS 메인 앱은 그대로 둡니다.
+            </p>
+            <code className="partner-namespace-code">cd teammates/rag-task/apps/web</code>
+            <code className="partner-namespace-code">npm run dev -- --port 4174</code>
+          </section>
         </div>
+
+        {highlights.length > 0 ? (
+          <section className="partner-namespace-highlights glass-panel">
+            <h3>Lane summary</h3>
+            <ul>
+              {highlights.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <section className="partner-namespace-preview glass-panel">
+          <div className="partner-namespace-preview-head">
+            <div>
+              <span className="partner-namespace-eyebrow">Embedded Preview</span>
+              <h3>{title}</h3>
+            </div>
+            <a href={launchUrl} target="_blank" rel="noreferrer" className="partner-namespace-secondary">
+              <ExternalLink size={18} />
+              <span>Open in new tab</span>
+            </a>
+          </div>
+          <p className="partner-namespace-preview-copy">
+            Studio Ops compatibility app가 실행 중이면 아래 iframe에서 바로 확인할 수 있습니다.
+          </p>
+          <div className="partner-namespace-frame-wrap">
+            <iframe
+              title={`${title} preview`}
+              src={launchUrl}
+              className="partner-namespace-frame"
+            />
+          </div>
+        </section>
       </div>
     </div>
   );

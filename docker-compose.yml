@@ -1,23 +1,82 @@
 services:
   qdrant:
     image: qdrant/qdrant:latest
-    volumes:
-      - qdrant_storage:/qdrant/storage
-    restart: unless-stopped
     ports:
       - "6335:6333"
       - "6336:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    env_file:
+      - path: ./.env.shared.example
+        required: true
+      - path: ./.env.shared
+        required: false
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  ollama-init:
+    image: ollama/ollama:latest
+    env_file:
+      - path: ./.env.shared.example
+        required: true
+      - path: ./.env.shared
+        required: false
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint:
+      - /bin/sh
+      - -lc
+      - |
+        ollama pull $${OLLAMA_EMBEDDING_MODEL:-bge-m3}
+    restart: "no"
+    volumes:
+      - ollama_data:/root/.ollama
 
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
     env_file:
-      - .env
+      - path: ./.env.shared.example
+        required: true
+      - path: ./.env.shared
+        required: false
+      - path: ./.env.pbs.example
+        required: true
+      - path: ./.env.pbs
+        required: false
     environment:
       PYTHONPATH: /app/src
-      QDRANT_URL: http://qdrant:6333
-      GRAPH_URI: bolt://host.docker.internal:7687
     depends_on:
       - qdrant
     extra_hosts:
@@ -40,14 +99,80 @@ services:
       start_period: 60s
     restart: unless-stopped
 
+  ops-app:
+    build:
+      context: ./teammates/rag-task
+      dockerfile: Dockerfile
+    env_file:
+      - path: ./.env.shared.example
+        required: true
+      - path: ./.env.shared
+        required: false
+      - path: ./.env.ops.example
+        required: true
+      - path: ./.env.ops
+        required: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+      ollama-init:
+        condition: service_completed_successfully
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./teammates/rag-task/data/corpus/pdfs:/app/data/corpus/pdfs
+      - ./teammates/rag-task/data/cache:/app/data/cache
+      - ./teammates/rag-task/data/extracted_markdown:/app/data/extracted_markdown
+      - ./teammates/rag-task/data/runtime_state:/app/data/runtime_state
+      - ops_model_cache:/app/data/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  aiops-web:
+    build:
+      context: ./teammates/rag-task/apps/web
+      dockerfile: Dockerfile
+    depends_on:
+      ops-app:
+        condition: service_healthy
+    ports:
+      - "5174:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 30s
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./presentation-ui
       dockerfile: Dockerfile
-    environment:
-      VITE_PROXY_TARGET: http://backend:8765
+    env_file:
+      - path: ./.env.ops.example
+        required: true
+      - path: ./.env.ops
+        required: false
+    command:
+      - /bin/sh
+      - -lc
+      - npm run build && npm run preview -- --host 0.0.0.0 --port 5173 --strictPort
     depends_on:
       backend:
+        condition: service_healthy
+      ops-app:
+        condition: service_healthy
+      aiops-web:
         condition: service_healthy
     ports:
       - "5173:5173"
@@ -56,8 +181,11 @@ services:
       interval: 15s
       timeout: 10s
       retries: 8
-      start_period: 30s
+      start_period: 90s
     restart: unless-stopped
 
 volumes:
   qdrant_storage:
+  postgres_data:
+  ollama_data:
+  ops_model_cache:
