@@ -45,7 +45,6 @@ env
 materialization
 reports/eval_reports/
 reports/tmp_repo_hygiene_audit.json
-!AGENTS.md
 study.md
 src/ocp_rag_v2.egg-info/
 C:/
@@ -70,3 +69,4 @@ docs/arrange_26.04.18*.md
 docs/ocp420_assignment_*.md
 docs/pipeline_toolchain_detail.md
 docs/retrieval_flow.md
+.kugnusdocs/
