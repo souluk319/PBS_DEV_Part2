@@ -2626,6 +2626,7 @@ export default function WorkspacePage() {
         surfaceMode={surfaceMode}
         testMode={testMode}
         globalTheme={globalTheme}
+        onOpenLanding={() => navigate(ROUTES.sharedHome)}
         onOpenPlaybook={handleOpenPlaybook}
         onOpenStudioOps={handleOpenStudioOps}
         onOpenLibrary={() => navigate(ROUTES.pbsPlaybookLibrary)}

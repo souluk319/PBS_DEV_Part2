@@ -3,9 +3,11 @@
 import {
   Bot,
   Boxes,
+  BookOpen,
   BriefcaseBusiness,
   Cable,
   GitBranch,
+  Home,
   LayoutDashboard,
   PlaySquare,
   SlidersHorizontal,
@@ -41,6 +43,26 @@ const navItems: Array<{
   { route: "scm", label: "SCM", icon: GitBranch },
 ];
 
+const DEFAULT_SHELL_BASE_URL = "http://127.0.0.1:5173";
+
+function resolveShellBaseUrl(): string {
+  const envBaseUrl = String(import.meta.env.VITE_PUBLIC_SHELL_BASE_URL ?? "").trim().replace(/\/$/, "");
+  if (envBaseUrl) {
+    return envBaseUrl;
+  }
+  if (typeof window !== "undefined" && window.top !== window) {
+    const referrer = String(document.referrer || "").trim();
+    if (referrer) {
+      try {
+        return new URL(referrer).origin;
+      } catch {
+        return DEFAULT_SHELL_BASE_URL;
+      }
+    }
+  }
+  return DEFAULT_SHELL_BASE_URL;
+}
+
 export function Sidebar({
   open,
   activeRoute,
@@ -49,6 +71,12 @@ export function Sidebar({
   railContent,
   footerContent,
 }: SidebarProps) {
+  const shellBaseUrl = resolveShellBaseUrl();
+  const exitLinks = [
+    { href: `${shellBaseUrl}/studio`, label: "Studio", icon: BookOpen },
+    { href: `${shellBaseUrl}/`, label: "Home", icon: Home },
+  ];
+
   return (
     <>
       <div
@@ -104,9 +132,26 @@ export function Sidebar({
         </nav>
 
         {railContent ? <div className="mt-6 overflow-auto pr-1">{railContent}</div> : null}
-        {footerContent ? <div className="mt-auto pt-4">{footerContent}</div> : null}
+
+        <div className="mt-auto pt-4">
+          {footerContent ? <div>{footerContent}</div> : null}
+          <div className={cn("grid gap-1", footerContent ? "mt-4 border-t border-border/70 pt-4" : "")}>
+            {exitLinks.map(({ href, label, icon: Icon }) => (
+              <a
+                key={label}
+                href={href}
+                target="_top"
+                rel="noreferrer"
+                onClick={onClose}
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-[#15181e] hover:text-foreground"
+              >
+                <Icon className="h-5 w-5" />
+                <span>{label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
       </aside>
     </>
   );
 }
-
