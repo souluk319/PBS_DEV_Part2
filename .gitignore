@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 .env
+.env.shared
+.env.pbs
+.env.ops
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

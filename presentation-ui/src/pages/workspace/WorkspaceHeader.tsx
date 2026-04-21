@@ -1,14 +1,17 @@
 import { ChevronDown, Languages, Sparkles, Moon, Sun } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { buildSharedLandingHref } from '../../app/routes';
+import { buildSharedLandingHref, type WorkspaceSurfaceMode } from '../../app/routes';
 
 type WorkspaceHeaderProps = {
   packDropdownOpen: boolean;
   packLabel: string;
   packOptions: readonly string[];
   sessionId: string;
+  surfaceMode: WorkspaceSurfaceMode;
   testMode: boolean;
   globalTheme: 'dark' | 'light';
+  onOpenPlaybook: () => void;
+  onOpenStudioOps: () => void;
   onOpenLibrary: () => void;
   onResetSession: () => void;
   onSelectPack: (label: string) => void;
@@ -22,7 +25,10 @@ export default function WorkspaceHeader({
   packLabel,
   packOptions,
   sessionId,
+  surfaceMode,
   testMode,
+  onOpenPlaybook,
+  onOpenStudioOps,
   onOpenLibrary,
   onResetSession,
   onSelectPack,
@@ -31,6 +37,9 @@ export default function WorkspaceHeader({
   onToggleGlobalTheme,
   globalTheme,
 }: WorkspaceHeaderProps) {
+  const isOpsMode = surfaceMode === 'ops';
+  const activeBranchLabel = isOpsMode ? 'Studio Ops' : 'Playbook';
+
   return (
     <header className="workspace-nav">
       <div className="nav-left">
@@ -40,33 +49,40 @@ export default function WorkspaceHeader({
           </div>
         </Link>
         <span className="logo-text">Playbook Studio</span>
-        <span className="header-divider">|</span>
-        <div className="pack-selector-wrapper">
-          <button
-            className="pack-selector-trigger"
-            type="button"
-            onClick={onTogglePackDropdown}
-          >
-            <span>{packLabel}</span>
-            <ChevronDown size={14} className={`pack-chevron ${packDropdownOpen ? 'open' : ''}`} />
-          </button>
-          {packDropdownOpen && (
-            <div className="pack-dropdown">
-              {packOptions.map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  className={`pack-dropdown-item ${label === packLabel ? 'active' : ''}`}
-                  onClick={() => {
-                    onSelectPack(label);
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+        <span className={`workspace-surface-pill ${isOpsMode ? 'is-ops' : 'is-playbook'}`}>
+          {activeBranchLabel}
+        </span>
+        {!isOpsMode && (
+          <>
+            <span className="header-divider">|</span>
+            <div className="pack-selector-wrapper">
+              <button
+                className="pack-selector-trigger"
+                type="button"
+                onClick={onTogglePackDropdown}
+              >
+                <span>{packLabel}</span>
+                <ChevronDown size={14} className={`pack-chevron ${packDropdownOpen ? 'open' : ''}`} />
+              </button>
+              {packDropdownOpen && (
+                <div className="pack-dropdown">
+                  {packOptions.map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className={`pack-dropdown-item ${label === packLabel ? 'active' : ''}`}
+                      onClick={() => {
+                        onSelectPack(label);
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
       <div className="nav-right">
         <div className="status-indicator" onClick={onResetSession} title="Click to start a new session">
@@ -78,13 +94,31 @@ export default function WorkspaceHeader({
             {globalTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
           </button>
         </div>
-        <button
-          className={`nav-btn test-mode-btn ${testMode ? 'active' : ''}`}
-          onClick={onToggleTestMode}
-          type="button"
-        >
-          TEST
-        </button>
+        <div className="workspace-branch-group" aria-label="Workspace branch selector">
+          <button
+            className={`nav-btn workspace-branch-btn ${!isOpsMode ? 'active' : ''}`}
+            onClick={onOpenPlaybook}
+            type="button"
+          >
+            Playbook
+          </button>
+          <button
+            className={`nav-btn workspace-branch-btn ${isOpsMode ? 'active' : ''}`}
+            onClick={onOpenStudioOps}
+            type="button"
+          >
+            Studio Ops
+          </button>
+        </div>
+        {!isOpsMode && (
+          <button
+            className={`nav-btn test-mode-btn ${testMode ? 'active' : ''}`}
+            onClick={onToggleTestMode}
+            type="button"
+          >
+            TEST
+          </button>
+        )}
         <button className="nav-btn" onClick={onOpenLibrary} type="button">Playbook Library</button>
         <button className="nav-btn lang-btn" type="button">
           <Languages size={18} />

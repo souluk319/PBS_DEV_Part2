@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import ConfigDict
+from pydantic import AliasChoices, ConfigDict, Field
 from pydantic_settings import BaseSettings
 
 
@@ -11,9 +11,19 @@ class ChatLlmSettings(BaseSettings):
         extra="ignore",
     )
 
-    cllm_base_url: str = ""
-    cllm_model: str = ""
-    cllm_api_key: str = ""
+    # Prefer the legacy Ops names first, but accept PBS canonical names during integration.
+    cllm_base_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("CLLM_BASE_URL", "LLM_ENDPOINT"),
+    )
+    cllm_model: str = Field(
+        default="",
+        validation_alias=AliasChoices("CLLM_MODEL", "LLM_MODEL"),
+    )
+    cllm_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("CLLM_API_KEY", "LLM_API_KEY"),
+    )
 
     llm_generate_temperature: float = 0.15
     llm_generate_max_tokens: int = 1400

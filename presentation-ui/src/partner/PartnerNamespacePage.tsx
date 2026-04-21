@@ -44,7 +44,7 @@ export default function PartnerNamespacePage({
             </a>
             <a href="https://github.com/JungyuOO/RAG_Task" target="_blank" rel="noreferrer" className="partner-namespace-secondary">
               <ExternalLink size={18} />
-              <span>Open teammate repo</span>
+              <span>Open compatibility repo</span>
             </a>
           </div>
         </section>
@@ -54,7 +54,7 @@ export default function PartnerNamespacePage({
             <SplitSquareVertical size={22} />
             <h3>Launch target</h3>
             <p>
-              teammate web app는 별도 포트에서 실행하고, PBS는 이 sibling lane에서 진입만 담당합니다.
+              Studio Ops compatibility app는 별도 포트에서 실행하고, PBS는 이 subtree에서 진입과 shell 연결을 담당합니다.
             </p>
             <code className="partner-namespace-code">{launchUrl}</code>
           </section>
@@ -62,14 +62,14 @@ export default function PartnerNamespacePage({
             <ShieldCheck size={22} />
             <h3>Truth isolation</h3>
             <p>
-              shared landing은 entry shell만 공유합니다. PBS runtime truth와 teammate system state는 분리 유지합니다.
+              shared landing은 entry shell만 공유합니다. PBS 문서 truth와 Studio Ops operational state는 분리 유지합니다.
             </p>
           </section>
           <section className="glass-panel">
             <FolderGit2 size={22} />
-            <h3>Integrated subtree</h3>
+            <h3>Compatibility subtree</h3>
             <p>
-              teammate source는 integration repo 내부
+              Studio Ops compatibility source는 integration repo 내부
               <strong> `teammates/rag-task` </strong>
               아래에 그대로 보존했습니다.
             </p>
@@ -80,7 +80,7 @@ export default function PartnerNamespacePage({
             <PlaySquare size={22} />
             <h3>Run notes</h3>
             <p>
-              teammate app preview가 필요하면 web은 별도 포트에서 실행하고, PBS 메인 앱은 그대로 둡니다.
+              compatibility preview가 필요하면 web은 별도 포트에서 실행하고, PBS 메인 앱은 그대로 둡니다.
             </p>
             <code className="partner-namespace-code">cd teammates/rag-task/apps/web</code>
             <code className="partner-namespace-code">npm run dev -- --port 4174</code>
@@ -110,7 +110,7 @@ export default function PartnerNamespacePage({
             </a>
           </div>
           <p className="partner-namespace-preview-copy">
-            teammate web app가 실행 중이면 아래 iframe에서 바로 확인할 수 있습니다.
+            Studio Ops compatibility app가 실행 중이면 아래 iframe에서 바로 확인할 수 있습니다.
           </p>
           <div className="partner-namespace-frame-wrap">
             <iframe

@@ -1,0 +1,11 @@
+.aiops-page {
+  background: #0d1016;
+  min-height: 100vh;
+}
+
+.aiops-page__frame {
+  border: 0;
+  display: block;
+  height: 100vh;
+  width: 100%;
+}

@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -21,8 +21,16 @@ class PgvectorRuntimeSettings(BaseSettings):
     rag_source_dir: Path
     embedding_backend: str = "ollama"
 
-    tei_base_url: str = ""
-    tei_embedding_model: str = "bge-m3"
+    # During PBS integration, TEI settings may come from either the Ops-specific keys
+    # or the PBS canonical embedding keys when both point to the same remote endpoint.
+    tei_base_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("TEI_BASE_URL", "EMBEDDING_BASE_URL"),
+    )
+    tei_embedding_model: str = Field(
+        default="bge-m3",
+        validation_alias=AliasChoices("TEI_EMBEDDING_MODEL", "EMBEDDING_MODEL"),
+    )
     tei_timeout: float = 120.0
     embedding_batch_size: int = 16
     embedding_batch_char_limit: int = 24000
