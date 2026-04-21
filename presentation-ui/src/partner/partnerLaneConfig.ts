@@ -6,6 +6,9 @@ export type PartnerRouteDefinition = {
   eyebrow: string;
   title: string;
   description: string;
+  teammatePath: string;
+  launchLabel: string;
+  highlights?: string[];
   card?: {
     icon: LucideIcon;
     title: string;
@@ -16,48 +19,83 @@ export type PartnerRouteDefinition = {
 export const PARTNER_ROUTE_DEFINITIONS: PartnerRouteDefinition[] = [
   {
     path: ROUTES.partnerHome,
-    eyebrow: 'Partner Lane',
-    title: 'Reserved partner namespace',
-    description: '다른 프로젝트 기능은 PBS route family를 침범하지 않고 sibling namespace 아래에서 병합됩니다.',
+    eyebrow: 'RAG Task Lane',
+    title: 'Integrated teammate system',
+    description: '팀원 과제 시스템은 PBS 메인 랜딩을 유지한 채 sibling lane으로 들어오고, 별도 workspace와 live OCP surface를 보존합니다.',
+    teammatePath: '/overview',
+    launchLabel: 'Open teammate overview',
+    highlights: [
+      'teammates/rag-task/apps/web',
+      'teammates/rag-task/apps/api',
+      'teammate/main @ e62074a',
+    ],
     card: {
       icon: Boxes,
-      title: 'Partner Home',
-      description: '공유 랜딩에서 시작되는 상대 프로젝트 메인 진입면',
+      title: 'RAG Task Home',
+      description: '팀원 과제의 dashboard, chat, library, live OCP 진입면',
     },
   },
   {
     path: ROUTES.partnerWorkspace,
-    eyebrow: 'Partner Workspace',
-    title: 'Partner workspace handoff',
-    description: '상대 프로젝트의 작업 공간은 이 sibling namespace로 유입되고, PBS workspace state와 분리됩니다.',
+    eyebrow: 'RAG Task Chat',
+    title: 'Chat and workspace lane',
+    description: '문서 RAG와 live cluster 질의를 합친 teammate chat/workspace surface로 이동합니다.',
+    teammatePath: '/chat',
+    launchLabel: 'Open teammate chat',
+    highlights: [
+      'follow-up chat session rail',
+      'workspace-aware connection state',
+      'document + live cluster answer route',
+    ],
   },
   {
     path: ROUTES.partnerLibrary,
-    eyebrow: 'Partner Library',
-    title: 'Partner library reservation',
-    description: '상대 프로젝트 library 진입면은 이 경로에 들어오고, PBS Playbook Library와 canonical truth를 공유하지 않습니다.',
+    eyebrow: 'RAG Task Library',
+    title: 'Library and indexing lane',
+    description: 'teammate library, batch reindex, document preview 흐름으로 연결되는 sibling page입니다.',
+    teammatePath: '/library',
+    launchLabel: 'Open teammate library',
+    highlights: [
+      'document library',
+      'batch reindex panel',
+      'docs preview endpoints',
+    ],
     card: {
       icon: FolderTree,
-      title: 'Partner Library',
-      description: 'PBS Playbook Library와 분리된 sibling library namespace',
+      title: 'RAG Task Library',
+      description: 'teammate library / indexing page로 들어가는 별도 lane',
     },
   },
   {
     path: ROUTES.partnerViewer,
-    eyebrow: 'Partner Viewer',
-    title: 'Partner viewer reservation',
-    description: '상대 프로젝트 viewer는 reserved namespace로 분리되며, PBS wiki runtime viewer deep link와 충돌하지 않습니다.',
+    eyebrow: 'RAG Task Live Ops',
+    title: 'Dashboard and live OCP lane',
+    description: 'cluster overview, resources, actions 같은 live OCP surface를 teammate 시스템 쪽에서 유지합니다.',
+    teammatePath: '/overview',
+    launchLabel: 'Open teammate live ops',
+    highlights: [
+      'dashboard overview',
+      'resources and YAML editor',
+      'action approval workflow',
+    ],
     card: {
       icon: MonitorPlay,
-      title: 'Partner Viewer',
-      description: 'PBS wiki runtime deep link와 충돌하지 않는 reserved viewer lane',
+      title: 'RAG Task Live Ops',
+      description: 'dashboard / resources / actions 흐름을 보존하는 teammate lane',
     },
   },
   {
     path: ROUTES.partnerDetails,
-    eyebrow: 'Partner Details',
-    title: 'Partner details placeholder',
-    description: '공유 랜딩은 여기로 handoff할 수 있지만, 제품 소개와 runtime truth ownership은 PBS 바깥 sibling lane에 남습니다.',
+    eyebrow: 'RAG Task Launch',
+    title: 'Launch and repository details',
+    description: 'teammate system 실행 경로, repo 위치, 분리 유지 원칙을 확인하는 페이지입니다.',
+    teammatePath: '/connections',
+    launchLabel: 'Open teammate connections',
+    highlights: [
+      'run web on a separate port',
+      'keep PBS landing as root',
+      'preserve teammate repo as sibling subtree',
+    ],
   },
 ];
 

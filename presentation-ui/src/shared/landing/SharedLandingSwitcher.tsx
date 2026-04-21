@@ -31,7 +31,7 @@ export default function SharedLandingSwitcher({ activeTab }: { activeTab: Shared
           className={`shared-shell-tab ${activeTab === 'partner' ? 'is-active' : ''}`}
         >
           <Layers3 size={16} />
-          <span>Partner Lane</span>
+          <span>RAG Task Lane</span>
         </Link>
       </div>
     </div>

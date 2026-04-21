@@ -32,7 +32,7 @@ export default function AppRoutes() {
       <Route path={ROUTES.pbsPlaybookLibrary} element={<PlaybookLibraryPage />} />
       <Route path={ROUTES.pbsControlTower} element={<PlaybookLibraryPage />} />
       <Route path={ROUTES.pbsRepository} element={<PlaybookLibraryPage />} />
-      {PARTNER_ROUTE_DEFINITIONS.map(({ path, eyebrow, title, description }) => (
+      {PARTNER_ROUTE_DEFINITIONS.map(({ path, eyebrow, title, description, teammatePath, launchLabel, highlights }) => (
         <Route
           key={path}
           path={path}
@@ -41,6 +41,9 @@ export default function AppRoutes() {
               eyebrow={eyebrow}
               title={title}
               description={description}
+              teammatePath={teammatePath}
+              launchLabel={launchLabel}
+              highlights={highlights}
             />
           )}
         />

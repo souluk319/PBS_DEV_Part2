@@ -7,21 +7,22 @@ export function PartnerLaneHero() {
   return (
     <div className="partner-lane-hero glass-panel">
       <div className="partner-lane-copy">
-        <span className="partner-lane-eyebrow">Partner Lane</span>
-        <h2 className="partner-lane-title">Sibling namespace, not PBS takeover.</h2>
+        <span className="partner-lane-eyebrow">RAG Task Lane</span>
+        <h2 className="partner-lane-title">PBS root stays. Teammate system joins as a new lane.</h2>
         <p className="partner-lane-description">
-          상대 프로젝트는 shared landing에서 함께 소개되지만, 실제 기능 surface는
+          팀원 과제는 shared landing에서 새 페이지로 연결되지만, 실제 기능 surface는
           <strong> `/partner/*` </strong>
-          아래에서 분기됩니다. 이렇게 해야 PBS runtime truth와 route ownership이 깨지지 않습니다.
+          아래에서 분기됩니다. PBS 메인 랜딩과 core route family는 유지하고,
+          teammate chat, dashboard, library, live OCP surface만 sibling lane으로 붙입니다.
         </p>
       </div>
       <div className="partner-lane-actions">
         <Link to={ROUTES.partnerHome} className="partner-primary-link">
-          <span>Open Partner Lane</span>
+          <span>Open RAG Task Lane</span>
           <ArrowRight size={18} />
         </Link>
         <Link to={ROUTES.partnerDetails} className="partner-secondary-link">
-          Integration Notes
+          Launch Details
         </Link>
       </div>
     </div>
@@ -58,7 +59,7 @@ export function PartnerGuardRail() {
         <p>
           PBS는 기존 경로
           <strong> `/studio`, `/llmwikibook`, `/playbook-library*` </strong>
-          를 그대로 유지하고, partner 기능만 sibling subtree로 받아들입니다.
+          를 그대로 유지하고, teammate 시스템은 subtree + sibling lane으로 받아들입니다.
         </p>
       </div>
     </div>
