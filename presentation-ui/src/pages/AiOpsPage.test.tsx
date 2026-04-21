@@ -14,8 +14,9 @@ describe('AiOpsPage', () => {
     expect(html).toContain('iframe');
     expect(html).toContain('title="AI Ops"');
     expect(html).toContain('src="http://127.0.0.1:5174/overview"');
-    expect(html).not.toContain('PlayBook Studio');
-    expect(html).not.toContain('Studio Ops');
+    expect(html).toContain('href="/"');
+    expect(html).toContain('href="/studio"');
+    expect(html).toContain('AI Ops');
   });
 
   it('defaults the public /aiops route to the chat entry when no explicit ops route is present', () => {

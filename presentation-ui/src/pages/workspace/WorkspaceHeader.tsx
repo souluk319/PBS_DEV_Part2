@@ -10,6 +10,7 @@ type WorkspaceHeaderProps = {
   surfaceMode: WorkspaceSurfaceMode;
   testMode: boolean;
   globalTheme: 'dark' | 'light';
+  onOpenLanding: () => void;
   onOpenPlaybook: () => void;
   onOpenStudioOps: () => void;
   onOpenLibrary: () => void;
@@ -27,6 +28,7 @@ export default function WorkspaceHeader({
   sessionId,
   surfaceMode,
   testMode,
+  onOpenLanding,
   onOpenPlaybook,
   onOpenStudioOps,
   onOpenLibrary,
@@ -96,6 +98,13 @@ export default function WorkspaceHeader({
         </div>
         <div className="workspace-branch-group" aria-label="Workspace branch selector">
           <button
+            className="nav-btn workspace-branch-btn"
+            onClick={onOpenLanding}
+            type="button"
+          >
+            Landing
+          </button>
+          <button
             className={`nav-btn workspace-branch-btn ${!isOpsMode ? 'active' : ''}`}
             onClick={onOpenPlaybook}
             type="button"
@@ -107,7 +116,7 @@ export default function WorkspaceHeader({
             onClick={onOpenStudioOps}
             type="button"
           >
-            Studio Ops
+            AI Ops
           </button>
         </div>
         {!isOpsMode && (

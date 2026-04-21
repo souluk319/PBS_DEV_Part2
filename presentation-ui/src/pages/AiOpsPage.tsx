@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
-import { readAiOpsRouteState } from '../app/routes';
+import { Link, useLocation } from 'react-router-dom';
+import { ArrowRight, Sparkles } from 'lucide-react';
+import { buildAiOpsHref, readAiOpsRouteState, ROUTES } from '../app/routes';
 import './AiOpsPage.css';
 
 const DEFAULT_AIOPS_UI_URL = 'http://127.0.0.1:5174';
@@ -41,6 +42,29 @@ export default function AiOpsPage() {
 
   return (
     <div className="aiops-page">
+      <header className="aiops-page__header">
+        <div className="aiops-page__brand">
+          <div className="aiops-page__brand-icon">
+            <Sparkles size={16} />
+          </div>
+          <div className="aiops-page__brand-copy">
+            <span className="aiops-page__eyebrow">OCP OPS</span>
+            <strong>AI Ops</strong>
+          </div>
+        </div>
+        <nav className="aiops-page__nav" aria-label="AI Ops quick navigation">
+          <Link to={ROUTES.sharedHome} className="aiops-page__nav-link">
+            <span>Landing</span>
+          </Link>
+          <Link to={ROUTES.pbsStudio} className="aiops-page__nav-link">
+            <span>Studio</span>
+          </Link>
+          <Link to={buildAiOpsHref(opsRoute)} className="aiops-page__nav-link is-active" aria-current="page">
+            <span>AI Ops</span>
+            <ArrowRight size={14} />
+          </Link>
+        </nav>
+      </header>
       <iframe
         key={iframeSrc}
         className="aiops-page__frame"
