@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { Group, Panel, Separator, usePanelRef, useDefaultLayout } from 'react-resizable-panels';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FileText,
   ChevronDown,
@@ -23,6 +23,8 @@ import {
   Star,
   Clock3,
   Compass,
+  ArrowLeftRight,
+  X,
 } from 'lucide-react';
 import gsap from 'gsap';
 import './WorkspacePage.css';
@@ -75,6 +77,20 @@ import {
 import { WIKI_VISION_MODES, loadStoredVisionMode, persistVisionMode, type VisionMode } from '../lib/wikiVision';
 import { resolveWorkspaceSourceBooks } from '../lib/workspaceSourceCatalog';
 import WorkspaceTracePanel from '../components/WorkspaceTracePanel';
+import { buildAiOpsHref, ROUTES, readAiOpsRouteState, readStudioSurfaceState } from '../app/routes';
+import type { OpsRoute } from '../ops/app/routes';
+import OpsSurface from '../ops/OpsSurface';
+import {
+  clearHandoffFromSearch,
+  createHandoffPayload,
+  createNextHandoffPayload,
+  getHandoffBotLabel,
+  getHandoffBranchLabel,
+  getHandoffReasonLabel,
+  readHandoffPayloadFromSearch,
+  type HandoffPayload,
+  writeHandoffPayloadToSearch,
+} from '../app/handoff';
 import WorkspaceHeader from './workspace/WorkspaceHeader';
 import {
   AssistantAnswer,
@@ -506,6 +522,138 @@ const PACK_OPTIONS = [
 
 const WIKI_OVERLAY_USER_ID = 'kugnus@cywell.co.kr';
 
+function buildRouteWithoutHandoff(pathname: string, search: string, hash: string): string {
+  return `${pathname}${clearHandoffFromSearch(search)}${hash || ''}`;
+}
+
+function parseRouteLike(route: string | undefined): { pathname: string; search: string; hash: string } | null {
+  const normalized = String(route || '').trim();
+  if (!normalized) {
+    return null;
+  }
+  try {
+    const parsed = new URL(normalized, 'https://playbookstudio.local');
+    return {
+      pathname: parsed.pathname,
+      search: parsed.search || '',
+      hash: parsed.hash || '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+function resolveStudioOpsSearchFromSourceRoute(route: string | undefined): string {
+  const parsed = parseRouteLike(route);
+  if (!parsed) {
+    return buildAiOpsHref('chat').replace(ROUTES.aiOps, '');
+  }
+  if (parsed.pathname === ROUTES.aiOps) {
+    const state = readAiOpsRouteState(parsed.search);
+    return buildAiOpsHref(state.opsRoute).replace(ROUTES.aiOps, '');
+  }
+  if (parsed.pathname !== ROUTES.pbsStudio) {
+    return buildAiOpsHref('chat').replace(ROUTES.aiOps, '');
+  }
+  const state = readStudioSurfaceState(parsed.search);
+  if (state.surfaceMode !== 'ops') {
+    return buildAiOpsHref('chat').replace(ROUTES.aiOps, '');
+  }
+  return buildAiOpsHref(state.opsRoute).replace(ROUTES.aiOps, '');
+}
+
+function resolvePlaybookTargetFromSourceRoute(route: string | undefined): { pathname: string; search: string; hash: string } {
+  const parsed = parseRouteLike(route);
+  if (!parsed || parsed.pathname !== ROUTES.pbsStudio) {
+    return {
+      pathname: ROUTES.pbsStudio,
+      search: '',
+      hash: '',
+    };
+  }
+  const state = readStudioSurfaceState(parsed.search);
+  return {
+    pathname: parsed.pathname,
+    search: state.surfaceMode === 'ops' ? '' : clearHandoffFromSearch(parsed.search),
+    hash: parsed.hash,
+  };
+}
+
+function summarizePlaybookIntent(query: string, messages: Message[]): string {
+  const draft = query.trim();
+  if (draft) {
+    return draft;
+  }
+  const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user')?.content?.trim();
+  if (lastUserMessage) {
+    return lastUserMessage;
+  }
+  return '현재 grounded playbook context를 바탕으로 다음 운영 단계를 이어서 확인해줘';
+}
+
+function summarizeOpsRouteIntent(route: OpsRoute): string {
+  switch (route) {
+    case 'resources':
+      return '현재 리소스 상태와 연결된 grounded playbook guidance를 이어서 확인해줘';
+    case 'overview':
+      return '현재 cluster overview와 연결된 grounded playbook guidance를 이어서 확인해줘';
+    case 'library':
+      return '현재 ops library 흐름과 연결된 grounded playbook guidance를 이어서 확인해줘';
+    case 'chat':
+      return '현재 운영 질문과 연결된 grounded playbook guidance를 이어서 확인해줘';
+    default:
+      return '현재 운영 흐름과 연결된 grounded playbook guidance를 이어서 확인해줘';
+  }
+}
+
+function WorkspaceHandoffBanner({
+  handoff,
+  isPrepared,
+  onDismiss,
+  onReturn,
+  onResume,
+}: {
+  handoff: HandoffPayload;
+  isPrepared: boolean;
+  onDismiss: () => void;
+  onReturn: () => void;
+  onResume: () => void;
+}) {
+  return (
+    <div className="workspace-handoff-banner glass-panel">
+      <div className="workspace-handoff-copy">
+        <div className="workspace-handoff-kicker">PlayBook Studio Handoff</div>
+        <div className="workspace-handoff-title">
+          {getHandoffBotLabel(handoff.fromBot)}
+          {" -> "}
+          {getHandoffBranchLabel(handoff.destinationBranch)}
+        </div>
+        <p className="workspace-handoff-description">{getHandoffReasonLabel(handoff.handoffReason)}</p>
+        <div className="workspace-handoff-summary">{handoff.intentSummary}</div>
+        {isPrepared && (
+          <div className="workspace-handoff-note">
+            handoff summary가 현재 입력창에 준비되어 있습니다.
+          </div>
+        )}
+      </div>
+      <div className="workspace-handoff-actions">
+        <button type="button" className="workspace-handoff-btn primary" onClick={onResume}>
+          <Sparkles size={14} />
+          <span>Resume In Playbook</span>
+        </button>
+        <button type="button" className="workspace-handoff-btn" onClick={onReturn}>
+          <ArrowLeftRight size={14} />
+          <span>Return to Studio Ops</span>
+        </button>
+        <button type="button" className="workspace-handoff-btn" onClick={onDismiss}>
+          <X size={14} />
+          <span>Dismiss</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function runtimePathFromUrl(viewerUrl: string): string {
   try {
     const parsed = new URL(viewerUrl, window.location.origin);
@@ -737,6 +885,7 @@ export default function WorkspacePage() {
   const [isBootstrapLoading, setIsBootstrapLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [query, setQuery] = useState('');
+  const [preparedPlaybookHandoffId, setPreparedPlaybookHandoffId] = useState('');
   const [sessionId, setSessionId] = useState(() => makeId('ID'));
   const [testMode, setTestMode] = useState(false);
   const [activeTestTrace, setActiveTestTrace] = useState<WorkspaceTestTrace | null>(null);
@@ -798,6 +947,7 @@ export default function WorkspacePage() {
   });
 
   const navigate = useNavigate();
+  const location = useLocation();
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
@@ -812,6 +962,138 @@ export default function WorkspacePage() {
     panelIds: ['workspace-left', 'workspace-center', 'workspace-right'],
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   });
+  const { surfaceMode, opsRoute } = useMemo(
+    () => readStudioSurfaceState(location.search),
+    [location.search],
+  );
+  const incomingHandoff = useMemo(
+    () => readHandoffPayloadFromSearch(location.search),
+    [location.search],
+  );
+  const isOpsMode = surfaceMode === 'ops';
+  const playbookIncomingHandoff = !isOpsMode
+    && incomingHandoff
+    && (incomingHandoff.destinationBranch === 'playbook' || incomingHandoff.destinationBranch === 'control_tower')
+      ? incomingHandoff
+      : null;
+
+  useEffect(() => {
+    if (isOpsMode) {
+      setPackDropdownOpen(false);
+    }
+  }, [isOpsMode]);
+
+  useEffect(() => {
+    if (!playbookIncomingHandoff) {
+      return;
+    }
+    if (preparedPlaybookHandoffId === playbookIncomingHandoff.handoffId) {
+      return;
+    }
+    if (query.trim() || messages.length > 0) {
+      return;
+    }
+    setQuery(playbookIncomingHandoff.intentSummary);
+    setPreparedPlaybookHandoffId(playbookIncomingHandoff.handoffId);
+  }, [messages.length, playbookIncomingHandoff, preparedPlaybookHandoffId, query]);
+
+  const handleDismissIncomingHandoff = useCallback(() => {
+    setPreparedPlaybookHandoffId('');
+    navigate({
+      pathname: location.pathname,
+      search: clearHandoffFromSearch(location.search),
+      hash: location.hash,
+    }, { replace: true });
+  }, [location.hash, location.pathname, location.search, navigate]);
+
+  const handleOpenPlaybook = useCallback((context?: { sourceSessionId?: string; intentSummary?: string; sourceRoute?: string }) => {
+    if (!isOpsMode) {
+      return;
+    }
+    const sourceRoute = buildRouteWithoutHandoff(location.pathname, location.search, location.hash);
+    const intentSummary = context?.intentSummary?.trim()
+      || incomingHandoff?.intentSummary
+      || summarizeOpsRouteIntent(opsRoute);
+    const target = resolvePlaybookTargetFromSourceRoute(context?.sourceRoute || incomingHandoff?.sourceRoute);
+    const payload = incomingHandoff
+      ? createNextHandoffPayload(incomingHandoff, {
+          sourceBranch: 'studio_ops',
+          destinationBranch: 'playbook',
+          fromBot: 'ocp_ops_bot',
+          toBot: 'playbot',
+          intentSummary,
+          handoffReason: 'needs_grounded_playbook_context',
+          sourceSessionId: context?.sourceSessionId,
+          sourceRoute,
+          truthOwner: 'pbs',
+        })
+      : createHandoffPayload({
+          sourceBranch: 'studio_ops',
+          destinationBranch: 'playbook',
+          fromBot: 'ocp_ops_bot',
+          toBot: 'playbot',
+          intentSummary,
+          handoffReason: 'needs_grounded_playbook_context',
+          sourceSessionId: context?.sourceSessionId,
+          sourceRoute,
+          truthOwner: 'pbs',
+        });
+    navigate({
+      pathname: target.pathname,
+      search: writeHandoffPayloadToSearch(target.search, payload),
+      hash: target.hash,
+    });
+  }, [incomingHandoff, isOpsMode, location.hash, location.pathname, location.search, navigate, opsRoute]);
+
+  const handleOpenStudioOps = useCallback(() => {
+    if (isOpsMode) {
+      return;
+    }
+    const sourceRoute = buildRouteWithoutHandoff(location.pathname, location.search, location.hash);
+    const payload = incomingHandoff
+      ? createNextHandoffPayload(incomingHandoff, {
+          sourceBranch: 'playbook',
+          destinationBranch: 'studio_ops',
+          fromBot: 'playbot',
+          toBot: 'ocp_ops_bot',
+          intentSummary: summarizePlaybookIntent(query, messages),
+          handoffReason: 'needs_live_cluster_context',
+          sourceSessionId: sessionId,
+          sourceRoute,
+          truthOwner: 'ops',
+        })
+      : createHandoffPayload({
+          sourceBranch: 'playbook',
+          destinationBranch: 'studio_ops',
+          fromBot: 'playbot',
+          toBot: 'ocp_ops_bot',
+          intentSummary: summarizePlaybookIntent(query, messages),
+          handoffReason: 'needs_live_cluster_context',
+          sourceSessionId: sessionId,
+          sourceRoute,
+          truthOwner: 'ops',
+        });
+    navigate(`${ROUTES.aiOps}${writeHandoffPayloadToSearch(buildAiOpsHref('chat').replace(ROUTES.aiOps, ''), payload)}`);
+  }, [incomingHandoff, isOpsMode, location.hash, location.pathname, location.search, messages, navigate, query, sessionId]);
+
+  const handleReturnToStudioOpsFromHandoff = useCallback(() => {
+    if (!playbookIncomingHandoff) {
+      return;
+    }
+    const sourceRoute = buildRouteWithoutHandoff(location.pathname, location.search, location.hash);
+    const payload = createNextHandoffPayload(playbookIncomingHandoff, {
+      sourceBranch: 'playbook',
+      destinationBranch: 'studio_ops',
+      fromBot: 'playbot',
+      toBot: 'ocp_ops_bot',
+      intentSummary: summarizePlaybookIntent(query, messages),
+      handoffReason: 'continue_in_studio_ops',
+      sourceSessionId: sessionId,
+      sourceRoute,
+      truthOwner: 'ops',
+    });
+    navigate(`${ROUTES.aiOps}${writeHandoffPayloadToSearch(resolveStudioOpsSearchFromSourceRoute(playbookIncomingHandoff.sourceRoute), payload)}`);
+  }, [location.hash, location.pathname, location.search, messages, navigate, playbookIncomingHandoff, query, sessionId]);
 
   const refreshSessionList = useCallback(async () => {
     setIsSessionListLoading(true);
@@ -2341,9 +2623,13 @@ export default function WorkspacePage() {
         packLabel={packLabel}
         packOptions={PACK_OPTIONS}
         sessionId={sessionId}
+        surfaceMode={surfaceMode}
         testMode={testMode}
         globalTheme={globalTheme}
-        onOpenLibrary={() => navigate('/playbook-library')}
+        onOpenLanding={() => navigate(ROUTES.sharedHome)}
+        onOpenPlaybook={handleOpenPlaybook}
+        onOpenStudioOps={handleOpenStudioOps}
+        onOpenLibrary={() => navigate(ROUTES.pbsPlaybookLibrary)}
         onResetSession={resetSession}
         onSelectPack={(label) => {
           setPackLabel(label);
@@ -2354,7 +2640,21 @@ export default function WorkspacePage() {
         onToggleGlobalTheme={handleToggleGlobalTheme}
       />
 
-      <main className="workspace-content">
+      <main className={`workspace-content ${isOpsMode ? 'workspace-content--ops' : ''}`}>
+        {isOpsMode ? (
+          <OpsSurface
+            route={opsRoute}
+            handoff={incomingHandoff && incomingHandoff.destinationBranch === 'studio_ops' ? incomingHandoff : null}
+            onNavigate={(nextRoute) => {
+              const nextSearch = incomingHandoff && incomingHandoff.destinationBranch === 'studio_ops'
+                ? writeHandoffPayloadToSearch(`?surface=ops&ops=${nextRoute}`, incomingHandoff)
+                : `?surface=ops&ops=${nextRoute}`;
+              navigate(`${ROUTES.pbsStudio}${nextSearch}`);
+            }}
+            onDismissHandoff={handleDismissIncomingHandoff}
+            onReturnToPlaybook={handleOpenPlaybook}
+          />
+        ) : (
         <Group
           orientation="horizontal"
           className="main-panel-group"
@@ -2810,6 +3110,18 @@ export default function WorkspacePage() {
                 </div>
               )}
               <div className="chat-messages" ref={chatMessagesRef}>
+                {playbookIncomingHandoff && (
+                  <WorkspaceHandoffBanner
+                    handoff={playbookIncomingHandoff}
+                    isPrepared={preparedPlaybookHandoffId === playbookIncomingHandoff.handoffId}
+                    onDismiss={handleDismissIncomingHandoff}
+                    onReturn={handleReturnToStudioOpsFromHandoff}
+                    onResume={() => {
+                      setQuery((current) => current.trim() || playbookIncomingHandoff.intentSummary);
+                      setPreparedPlaybookHandoffId(playbookIncomingHandoff.handoffId);
+                    }}
+                  />
+                )}
                 {messages.length === 0 && (
                   <div className="chat-welcome">
                     <div className="welcome-icon">
@@ -3221,6 +3533,7 @@ export default function WorkspacePage() {
             )}
           </WorkspaceViewerPanel>
         </Group>
+        )}
       </main>
     </div>
   );

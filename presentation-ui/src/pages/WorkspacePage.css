@@ -109,6 +109,33 @@
   letter-spacing: -0.02em;
 }
 
+.workspace-surface-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--pbs-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workspace-surface-pill.is-playbook {
+  border-color: rgba(0, 209, 255, 0.24);
+  background: rgba(0, 209, 255, 0.08);
+  color: #dffbff;
+}
+
+.workspace-surface-pill.is-ops {
+  border-color: rgba(182, 155, 255, 0.28);
+  background: rgba(182, 155, 255, 0.1);
+  color: #efe6ff;
+}
+
 .header-divider {
   color: rgba(255, 255, 255, 0.34);
   font-size: 1rem;
@@ -192,6 +219,17 @@
   gap: 16px;
 }
 
+.workspace-branch-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace-branch-btn {
+  min-width: 108px;
+  border-radius: 999px;
+}
+
 .status-indicator {
   display: flex;
   align-items: center;
@@ -272,6 +310,12 @@
   border-color: rgba(255, 255, 255, 0.2);
 }
 
+.nav-btn.active {
+  border-color: rgba(0, 209, 255, 0.45);
+  background: rgba(0, 209, 255, 0.14);
+  color: #dffbff;
+}
+
 .test-mode-btn {
   min-width: 64px;
   padding-inline: 14px;
@@ -302,6 +346,98 @@
   z-index: 1;
   overflow: hidden;
   overscroll-behavior: none;
+}
+
+.workspace-content.workspace-content--ops {
+  padding-bottom: 16px;
+}
+
+.workspace-handoff-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border: 1px solid rgba(0, 209, 255, 0.16);
+  background:
+    linear-gradient(180deg, rgba(0, 209, 255, 0.09), rgba(255, 255, 255, 0.03)),
+    rgba(9, 14, 22, 0.72);
+}
+
+.workspace-handoff-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.workspace-handoff-kicker {
+  color: var(--pbs-accent-cyan);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.workspace-handoff-title {
+  color: #f4fbff;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.workspace-handoff-description {
+  margin: 0;
+  color: rgba(224, 236, 244, 0.8);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.workspace-handoff-summary {
+  color: #ffffff;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.workspace-handoff-note {
+  color: rgba(205, 230, 239, 0.68);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.workspace-handoff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.workspace-handoff-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--pbs-text-main);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.workspace-handoff-btn:hover {
+  border-color: rgba(0, 209, 255, 0.22);
+  background: rgba(0, 209, 255, 0.08);
+}
+
+.workspace-handoff-btn.primary {
+  border-color: rgba(0, 209, 255, 0.3);
+  background: rgba(0, 209, 255, 0.14);
+  color: #dffbff;
 }
 
 .main-panel-group {

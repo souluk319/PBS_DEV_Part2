@@ -84,7 +84,7 @@ export default function ProductSurfaces() {
     <section className="surfaces-container" ref={containerRef}>
       <div className="surfaces-header">
         <h2 className="text-hero">Product Surfaces</h2>
-        <p className="text-subtitle">어떻게 보여줄 것인가. 세 가지의 연결된 인터페이스.</p>
+        <p className="text-subtitle">Playbook을 메인으로, Studio Ops를 고급 운영 branch로 여는 세 가지의 연결된 인터페이스.</p>
       </div>
 
       <div className="surfaces-grid">
@@ -97,25 +97,25 @@ export default function ProductSurfaces() {
           <div className="glow-orb"></div>
           <div className="card-content">
             <div className="surface-icon">
-              <MessageSquare size={48} color="var(--accent-cyan)" />
+              <BookOpen size={48} color="var(--accent-cyan)" />
             </div>
-            <h3>Studio</h3>
-            <p>Playbot과 근거 문서를 함께 여는 운영 스튜디오</p>
+            <h3>Playbook</h3>
+            <p>Playbot과 grounded 문서를 함께 여는 기본 작업 branch</p>
           </div>
         </Link>
 
         <Link
-          to={ROUTES.pbsPlaybookLibrary}
+          to={ROUTES.aiOps}
           className="surface-card glass-panel"
           ref={el => { cardsRef.current[1] = el; }}
         >
           <div className="glow-orb"></div>
           <div className="card-content">
             <div className="surface-icon">
-              <BookOpen size={48} color="var(--text-main)" />
+              <MessageSquare size={48} color="var(--text-main)" />
             </div>
-            <h3>Playbook Library</h3>
-            <p>Citation을 클릭하면 펼쳐지는 정확한 섹션 이동</p>
+            <h3>Studio Ops</h3>
+            <p>OCP 운영 질문과 live surface를 여는 고급 운영 branch</p>
           </div>
         </Link>
 
@@ -130,7 +130,7 @@ export default function ProductSurfaces() {
               <MonitorPlay size={48} color="var(--accent-purple)" />
             </div>
             <h3>Control Tower</h3>
-            <p>현황과 품질, 평가 리포트를 한 눈에 점검하는 상황실</p>
+            <p>Playbook Library 안에서 현황과 품질, 평가 리포트를 점검하는 운영 view</p>
           </div>
         </Link>
 

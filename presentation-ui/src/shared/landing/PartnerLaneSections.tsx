@@ -7,21 +7,22 @@ export function PartnerLaneHero() {
   return (
     <div className="partner-lane-hero glass-panel">
       <div className="partner-lane-copy">
-        <span className="partner-lane-eyebrow">Partner Lane</span>
-        <h2 className="partner-lane-title">Sibling namespace, not PBS takeover.</h2>
+        <span className="partner-lane-eyebrow">Studio Ops Compatibility</span>
+        <h2 className="partner-lane-title">PBS root stays. Studio Ops joins through a compatibility lane.</h2>
         <p className="partner-lane-description">
-          상대 프로젝트는 shared landing에서 함께 소개되지만, 실제 기능 surface는
+          Studio Ops는 shared landing에서 분기되지만, 현재 단계의 실제 기능 surface는
           <strong> `/partner/*` </strong>
-          아래에서 분기됩니다. 이렇게 해야 PBS runtime truth와 route ownership이 깨지지 않습니다.
+          아래에서 호환 레인으로 열립니다. PBS 메인 랜딩과 core route family는 유지하고,
+          ops chat, dashboard, library, live OCP surface만 compatibility subtree로 연결합니다.
         </p>
       </div>
       <div className="partner-lane-actions">
         <Link to={ROUTES.partnerHome} className="partner-primary-link">
-          <span>Open Partner Lane</span>
+          <span>Open Studio Ops Lane</span>
           <ArrowRight size={18} />
         </Link>
         <Link to={ROUTES.partnerDetails} className="partner-secondary-link">
-          Integration Notes
+          Compatibility Details
         </Link>
       </div>
     </div>
@@ -54,11 +55,11 @@ export function PartnerGuardRail() {
         <Waypoints size={22} />
       </div>
       <div>
-        <h3>Merge-ready guardrail</h3>
+        <h3>Integration guardrail</h3>
         <p>
           PBS는 기존 경로
           <strong> `/studio`, `/llmwikibook`, `/playbook-library*` </strong>
-          를 그대로 유지하고, partner 기능만 sibling subtree로 받아들입니다.
+          를 그대로 유지하고, Studio Ops는 compatibility subtree와 shared shell을 함께 사용합니다.
         </p>
       </div>
     </div>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import mimetypes
 import re
 import uuid
 import json
@@ -14,6 +15,7 @@ from play_book_studio.intake import (
     DocSourceRequest,
     CustomerPackDraftStore,
     CustomerPackPlanner,
+    build_customer_pack_stage_strategy,
     build_customer_pack_support_matrix as _build_customer_pack_support_matrix_model,
 )
 from play_book_studio.intake.capture.service import CustomerPackCaptureService
@@ -34,6 +36,8 @@ SUPPORTED_CUSTOMER_PACK_SOURCE_TYPES = {
     "docx",
     "pptx",
     "xlsx",
+    "hwp",
+    "hwpx",
     "image",
 }
 
@@ -153,6 +157,7 @@ def build_customer_pack_plan(payload: dict[str, Any]) -> dict[str, Any]:
     plan["support_route"] = selected_support
     plan["support_review_rule"] = support_review_rule
     plan["ocr_metadata"] = ocr_metadata
+    plan["stage_strategy"] = build_customer_pack_stage_strategy(request.source_type)
     plan["support_matrix"] = support_matrix
     return plan
 
@@ -161,7 +166,7 @@ def build_customer_pack_support_matrix() -> dict[str, Any]:
     return _build_customer_pack_support_matrix_model().to_dict()
 
 
-def customer_pack_request_from_payload(payload: dict[str, Any]) -> DocSourceRequest:
+def customer_pack_request_from_payload(payload: dict[str, Any], *, require_uri: bool = True) -> DocSourceRequest:
     source_type = str(payload.get("source_type") or "").strip().lower()
     uri = str(payload.get("uri") or "").strip()
     title = str(payload.get("title") or "").strip()
@@ -169,9 +174,9 @@ def customer_pack_request_from_payload(payload: dict[str, Any]) -> DocSourceRequ
 
     if source_type not in SUPPORTED_CUSTOMER_PACK_SOURCE_TYPES:
         raise ValueError(
-            "source_type은 web, pdf, md, asciidoc, txt, docx, pptx, xlsx, image 중 하나여야 합니다."
+            "source_type은 web, pdf, md, asciidoc, txt, docx, pptx, xlsx, hwp, hwpx, image 중 하나여야 합니다."
         )
-    if not uri:
+    if require_uri and not uri:
         raise ValueError("uri가 필요합니다.")
 
     return DocSourceRequest(
@@ -190,7 +195,7 @@ def create_customer_pack_draft(root_dir: Path, payload: dict[str, Any]) -> dict[
 
 
 def upload_customer_pack_draft(root_dir: Path, payload: dict[str, Any]) -> dict[str, Any]:
-    request = customer_pack_request_from_payload(payload)
+    request = customer_pack_request_from_payload(payload, require_uri=False)
     file_name = str(payload.get("file_name") or "").strip()
     file_bytes = payload.get("file_bytes")
     if not file_name:
@@ -220,6 +225,8 @@ def upload_customer_pack_draft(root_dir: Path, payload: dict[str, Any]) -> dict[
         "docx": ".docx",
         "pptx": ".pptx",
         "xlsx": ".xlsx",
+        "hwp": ".hwp",
+        "hwpx": ".hwpx",
         "image": ".png",
     }.get(request.source_type, ".html")
     source_suffix = Path(file_name).suffix or default_suffix
@@ -340,6 +347,35 @@ def load_customer_pack_capture(
     return artifact_path.read_bytes(), record.capture_content_type or "application/octet-stream"
 
 
+def load_customer_pack_asset(
+    root_dir: Path,
+    draft_id: str,
+    asset_ref: str,
+) -> tuple[bytes, str] | None:
+    normalized_ref = str(asset_ref or "").strip()
+    if not normalized_ref or Path(normalized_ref).name != normalized_ref:
+        return None
+    record = CustomerPackDraftStore(root_dir).get(draft_id)
+    if record is None:
+        return None
+    settings = load_settings(root_dir)
+    assets_root = settings.customer_pack_assets_dir.resolve()
+    asset_path = (settings.customer_pack_assets_dir / draft_id / normalized_ref).resolve()
+    if asset_path == assets_root or assets_root not in asset_path.parents or not asset_path.exists():
+        return None
+    content_type = mimetypes.guess_type(str(asset_path))[0] or "application/octet-stream"
+    book_payload = load_customer_pack_book(root_dir, draft_id)
+    if isinstance(book_payload, dict):
+        for asset in book_payload.get("figure_assets") or []:
+            if not isinstance(asset, dict):
+                continue
+            if str(asset.get("asset_ref") or "").strip() != normalized_ref:
+                continue
+            content_type = str(asset.get("content_type") or content_type).strip() or content_type
+            break
+    return asset_path.read_bytes(), content_type
+
+
 __all__ = [
     "build_customer_pack_plan",
     "build_customer_pack_support_matrix",
@@ -347,6 +383,7 @@ __all__ = [
     "create_customer_pack_draft",
     "customer_pack_request_from_payload",
     "ingest_customer_pack",
+    "load_customer_pack_asset",
     "load_customer_pack_capture",
     "load_customer_pack_draft",
     "normalize_customer_pack_draft",

@@ -6,7 +6,7 @@ import html
 import json
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from play_book_studio.config.settings import load_settings
 from play_book_studio.intake import CustomerPackDraftStore
@@ -23,6 +23,32 @@ from .viewers import (
 
 
 CUSTOMER_PACK_VIEWER_PREFIX = "/playbooks/customer-packs/"
+
+
+def customer_pack_asset_api_url(draft_id: str, asset_ref: str) -> str:
+    return "/api/customer-packs/assets?draft_id={draft_id}&asset_ref={asset_ref}".format(
+        draft_id=quote(str(draft_id or "").strip(), safe=""),
+        asset_ref=quote(str(asset_ref or "").strip(), safe=""),
+    )
+
+
+def _hydrate_customer_pack_figure_assets(payload: dict[str, Any], *, draft_id: str) -> None:
+    hydrated_assets: list[dict[str, Any]] = []
+    for item in payload.get("figure_assets") or []:
+        if not isinstance(item, dict):
+            continue
+        asset_ref = str(item.get("asset_ref") or item.get("asset_name") or "").strip()
+        if not asset_ref:
+            continue
+        asset_payload = dict(item)
+        asset_payload["asset_ref"] = asset_ref
+        asset_payload["asset_name"] = str(item.get("asset_name") or asset_ref).strip() or asset_ref
+        asset_payload["asset_url"] = str(item.get("asset_url") or "").strip() or customer_pack_asset_api_url(
+            draft_id,
+            asset_ref,
+        )
+        hydrated_assets.append(asset_payload)
+    payload["figure_assets"] = hydrated_assets
 
 
 def _customer_pack_boundary_payload(record: Any) -> dict[str, Any]:
@@ -90,6 +116,7 @@ def load_customer_pack_book(root_dir: Path, draft_id: str) -> dict[str, Any] | N
         return None
     payload = json.loads(canonical_path.read_text(encoding="utf-8"))
     payload["draft_id"] = record.draft_id
+    _hydrate_customer_pack_figure_assets(payload, draft_id=record.draft_id)
     payload["target_viewer_path"] = (
         f"{CUSTOMER_PACK_VIEWER_PREFIX}{record.draft_id}/assets/{asset_slug}/index.html"
         if asset_slug
@@ -122,7 +149,17 @@ def internal_customer_pack_viewer_html(root_dir: Path, viewer_path: str) -> str 
     sections = list(canonical_book.get("sections") or [])
     if not sections:
         return None
-    cards = _build_study_section_cards(sections, target_anchor=target_anchor, embedded=embedded)
+    figure_assets_by_ref = {
+        str(asset.get("asset_ref") or "").strip(): dict(asset)
+        for asset in (canonical_book.get("figure_assets") or [])
+        if isinstance(asset, dict) and str(asset.get("asset_ref") or "").strip()
+    }
+    cards = _build_study_section_cards(
+        sections,
+        target_anchor=target_anchor,
+        embedded=embedded,
+        figure_assets_by_ref=figure_assets_by_ref,
+    )
     family_label = str(canonical_book.get("family_label") or "").strip()
     family_summary = str(canonical_book.get("family_summary") or "").strip()
     derived_asset_count = int(canonical_book.get("derived_asset_count") or 0)

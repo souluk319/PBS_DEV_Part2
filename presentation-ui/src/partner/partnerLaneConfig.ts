@@ -6,6 +6,9 @@ export type PartnerRouteDefinition = {
   eyebrow: string;
   title: string;
   description: string;
+  teammatePath: string;
+  launchLabel: string;
+  highlights?: string[];
   card?: {
     icon: LucideIcon;
     title: string;
@@ -16,48 +19,83 @@ export type PartnerRouteDefinition = {
 export const PARTNER_ROUTE_DEFINITIONS: PartnerRouteDefinition[] = [
   {
     path: ROUTES.partnerHome,
-    eyebrow: 'Partner Lane',
-    title: 'Reserved partner namespace',
-    description: '다른 프로젝트 기능은 PBS route family를 침범하지 않고 sibling namespace 아래에서 병합됩니다.',
+    eyebrow: 'Studio Ops Compat',
+    title: 'Integrated Studio Ops surface',
+    description: 'Studio Ops는 PBS 메인 랜딩을 유지한 채 compatibility lane으로 들어오고, 별도 workspace와 live OCP surface를 단계적으로 shared shell에 맞춥니다.',
+    teammatePath: '/overview',
+    launchLabel: 'Open Studio Ops overview',
+    highlights: [
+      'compat namespace /partner/*',
+      'shared landing + shared shell',
+      'ops overview entry',
+    ],
     card: {
       icon: Boxes,
-      title: 'Partner Home',
-      description: '공유 랜딩에서 시작되는 상대 프로젝트 메인 진입면',
+      title: 'Studio Ops Home',
+      description: 'dashboard, workspace, library, live OCP 진입면',
     },
   },
   {
     path: ROUTES.partnerWorkspace,
-    eyebrow: 'Partner Workspace',
-    title: 'Partner workspace handoff',
-    description: '상대 프로젝트의 작업 공간은 이 sibling namespace로 유입되고, PBS workspace state와 분리됩니다.',
+    eyebrow: 'Studio Ops Workspace',
+    title: 'Workspace and ops chat lane',
+    description: '문서 근거와 live cluster 질의를 함께 다루는 Studio Ops workspace surface로 이동합니다.',
+    teammatePath: '/chat',
+    launchLabel: 'Open Studio Ops workspace',
+    highlights: [
+      'follow-up chat session rail',
+      'workspace-aware connection state',
+      'document + live cluster answer route',
+    ],
   },
   {
     path: ROUTES.partnerLibrary,
-    eyebrow: 'Partner Library',
-    title: 'Partner library reservation',
-    description: '상대 프로젝트 library 진입면은 이 경로에 들어오고, PBS Playbook Library와 canonical truth를 공유하지 않습니다.',
+    eyebrow: 'Studio Ops Library',
+    title: 'Library and indexing lane',
+    description: 'Studio Ops library, batch reindex, document preview 흐름으로 연결되는 compatibility page입니다.',
+    teammatePath: '/library',
+    launchLabel: 'Open Studio Ops library',
+    highlights: [
+      'document library',
+      'batch reindex panel',
+      'docs preview endpoints',
+    ],
     card: {
       icon: FolderTree,
-      title: 'Partner Library',
-      description: 'PBS Playbook Library와 분리된 sibling library namespace',
+      title: 'Studio Ops Library',
+      description: 'ops library / indexing page로 들어가는 compatibility lane',
     },
   },
   {
     path: ROUTES.partnerViewer,
-    eyebrow: 'Partner Viewer',
-    title: 'Partner viewer reservation',
-    description: '상대 프로젝트 viewer는 reserved namespace로 분리되며, PBS wiki runtime viewer deep link와 충돌하지 않습니다.',
+    eyebrow: 'Studio Ops Live',
+    title: 'Dashboard and live OCP lane',
+    description: 'cluster overview, resources, actions 같은 live OCP surface를 Studio Ops compatibility lane에서 유지합니다.',
+    teammatePath: '/overview',
+    launchLabel: 'Open Studio Ops live ops',
+    highlights: [
+      'dashboard overview',
+      'resources and YAML editor',
+      'action approval workflow',
+    ],
     card: {
       icon: MonitorPlay,
-      title: 'Partner Viewer',
-      description: 'PBS wiki runtime deep link와 충돌하지 않는 reserved viewer lane',
+      title: 'Studio Ops Live',
+      description: 'dashboard / resources / actions 흐름을 보존하는 ops lane',
     },
   },
   {
     path: ROUTES.partnerDetails,
-    eyebrow: 'Partner Details',
-    title: 'Partner details placeholder',
-    description: '공유 랜딩은 여기로 handoff할 수 있지만, 제품 소개와 runtime truth ownership은 PBS 바깥 sibling lane에 남습니다.',
+    eyebrow: 'Studio Ops Details',
+    title: 'Compatibility and launch details',
+    description: 'Studio Ops 실행 경로, compatibility namespace, 단계적 통합 원칙을 확인하는 페이지입니다.',
+    teammatePath: '/connections',
+    launchLabel: 'Open Studio Ops connections',
+    highlights: [
+      'shared landing stays root',
+      'compat route continuity',
+      'separate ops runtime preserved',
+    ],
   },
 ];
 

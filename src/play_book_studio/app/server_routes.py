@@ -7,6 +7,7 @@ from .repository_registry import search_github_repositories as _search_github_re
 from .server_routes_customer_pack import (
     _customer_pack_read_allowed,
     _send_customer_pack_read_blocked,
+    handle_customer_pack_assets,
     handle_customer_pack_book,
     handle_customer_pack_capture,
     handle_customer_pack_captured,

@@ -134,6 +134,8 @@ class Settings(SettingsPathMixin):
     customer_pack_pdf_fallback_backend: str = ""
     official_html_fallback_allowed: bool = False
     allow_stale_full_rebuild_export: bool = False
+    unhwp_bin: str = ""
+    unhwp_timeout_seconds: float = 30.0
     surya_ocr_endpoint: str = ""
     surya_health_endpoint: str = ""
     surya_timeout_seconds: float = 30.0
@@ -344,6 +346,8 @@ def load_settings(root_dir: str | Path) -> Settings:
             "PBS_ALLOW_STALE_FULL_REBUILD_EXPORT",
             "false",
         ).lower() in {"1", "true", "yes", "on"},
+        unhwp_bin=effective_env.get("UNHWP_BIN", "").strip(),
+        unhwp_timeout_seconds=float(effective_env.get("UNHWP_TIMEOUT_SECONDS", "30")),
         surya_ocr_endpoint=effective_env.get("SURYA_OCR", "").strip().rstrip("/"),
         surya_health_endpoint=effective_env.get("SURYA_HEALTH", "").strip().rstrip("/"),
         surya_timeout_seconds=float(effective_env.get("SURYA_TIMEOUT_SECONDS", "30")),

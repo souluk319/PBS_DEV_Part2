@@ -49,6 +49,36 @@ def _aggregate_vector_runtime(subqueries: list[dict[str, object]]) -> dict[str, 
     }
 
 
+def _degraded_vector_runtime(
+    *,
+    rewritten_queries: list[str],
+    error: str,
+    private_probe_runtime: dict[str, object] | None = None,
+) -> dict[str, object]:
+    private_status = str((private_probe_runtime or {}).get("status", ""))
+    private_hit_count = int((private_probe_runtime or {}).get("hit_count", 0) or 0)
+    subqueries: list[dict[str, object]] = []
+    for subquery in rewritten_queries:
+        runtime_payload = _vector_subquery_runtime(
+            query=subquery,
+            runtime={
+                "endpoint_used": "",
+                "attempted_endpoints": [],
+                "hit_count": 0,
+                "top_score": None,
+            },
+        )
+        runtime_payload["private_vector_status"] = private_status
+        runtime_payload["private_hit_count"] = private_hit_count
+        subqueries.append(runtime_payload)
+    payload = _aggregate_vector_runtime(subqueries)
+    payload["status"] = "degraded"
+    payload["error"] = error
+    payload["private_vector_status"] = private_status
+    payload["private_hit_count"] = private_hit_count
+    return payload
+
+
 def search_bm25_candidates(
     retriever,
     *,
@@ -155,14 +185,23 @@ def search_vector_candidates(
         top_k=effective_candidate_k,
     )
     if retriever.vector_retriever is None and str(private_probe_runtime.get("status") or "") != "ready":
+        detail = "vector retriever is not configured"
         _emit_trace_event(
             trace_callback,
             step="vector_search",
             label="의미 검색 실패",
             status="error",
-            detail="vector retriever is not configured",
+            detail=detail,
         )
-        raise RuntimeError("vector retriever is not configured")
+        return {
+            "hits": [],
+            "runtime": _degraded_vector_runtime(
+                rewritten_queries=rewritten_queries,
+                error=detail,
+                private_probe_runtime=private_probe_runtime,
+            ),
+        }
+    vector_started_at = time.perf_counter()
     try:
         _emit_trace_event(
             trace_callback,
@@ -170,7 +209,6 @@ def search_vector_candidates(
             label="의미 검색 중",
             status="running",
         )
-        vector_started_at = time.perf_counter()
         vector_hit_sets: list[list[RetrievalHit]] = []
         vector_subqueries: list[dict[str, object]] = []
         for subquery in rewritten_queries:
@@ -253,5 +291,14 @@ def search_vector_candidates(
             label="의미 검색 실패",
             status="error",
             detail=str(exc),
+            duration_ms=_duration_ms(vector_started_at),
         )
-        raise RuntimeError(f"vector search failed: {exc}") from exc
+        timings_ms["vector_search"] = _duration_ms(vector_started_at)
+        return {
+            "hits": [],
+            "runtime": _degraded_vector_runtime(
+                rewritten_queries=rewritten_queries,
+                error=f"vector search failed: {exc}",
+                private_probe_runtime=private_probe_runtime,
+            ),
+        }

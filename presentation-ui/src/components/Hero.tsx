@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { Link } from 'react-router-dom';
-import { Sparkles, ArrowRight, Languages } from 'lucide-react';
+import { Sparkles, ArrowRight, Languages, Menu, ChevronDown } from 'lucide-react';
 import { ROUTES } from '../app/routes';
 import './Hero.css';
 
@@ -9,6 +9,8 @@ export default function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
   const maskRef = useRef<HTMLDivElement>(null);
   const textGroupRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -33,9 +35,60 @@ export default function Hero() {
     return () => ctx.revert();
   }, []);
 
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    window.addEventListener('mousedown', handlePointerDown);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, []);
+
   return (
     <section className="hero-container" ref={containerRef}>
       <div className="hero-nav">
+        <div className="hero-menu" ref={menuRef}>
+          <button
+            type="button"
+            className="hero-menu-trigger"
+            aria-expanded={menuOpen}
+            aria-controls="landing-primary-menu"
+            onClick={() => setMenuOpen((current) => !current)}
+          >
+            <Menu size={18} />
+            <span>Menu</span>
+            <ChevronDown size={16} className={`hero-menu-chevron ${menuOpen ? 'open' : ''}`} />
+          </button>
+          <div
+            id="landing-primary-menu"
+            className={`hero-menu-popover ${menuOpen ? 'is-open' : ''}`}
+            role="menu"
+            aria-label="Landing primary menu"
+          >
+            <Link
+              to={ROUTES.pbsStudio}
+              className="hero-menu-link"
+              role="menuitem"
+              onClick={() => setMenuOpen(false)}
+            >
+              <span>Studio</span>
+              <ArrowRight size={15} />
+            </Link>
+            <Link
+              to={ROUTES.aiOps}
+              className="hero-menu-link"
+              role="menuitem"
+              onClick={() => setMenuOpen(false)}
+            >
+              <span>AI Ops</span>
+              <ArrowRight size={15} />
+            </Link>
+          </div>
+        </div>
         <button className="lang-btn" type="button">
           <Languages size={18} />
           <span>KOR</span>
@@ -66,7 +119,11 @@ export default function Hero() {
             <span>Launch Studio</span>
             <ArrowRight size={18} />
           </Link>
-          <button className="secondary-cta">Watch Demo</button>
+          <Link to={ROUTES.aiOps} className="secondary-cta hero-aiops-cta">
+            <span>AI Ops</span>
+            <ArrowRight size={18} />
+          </Link>
+          <button className="secondary-cta" type="button">Demo 영상</button>
         </div>
       </div>
 
