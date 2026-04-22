@@ -13,6 +13,8 @@ from play_book_studio.ingestion.topic_playbooks import (
     TOPIC_PLAYBOOK_SOURCE_TYPE,
     TROUBLESHOOTING_PLAYBOOK_SOURCE_TYPE,
 )
+from .grade_ladder import build_customer_pack_stage_strategy, classify_customer_pack_playbook_grade
+from .parser_harness import build_parser_challenger_scorecard
 
 CUSTOMER_PACK_DERIVED_FAMILIES: tuple[str, ...] = (
     TOPIC_PLAYBOOK_SOURCE_TYPE,
@@ -76,6 +78,8 @@ _STRUCTURED_MANIFEST_KEY_RE = re.compile(
     re.IGNORECASE,
 )
 _STRUCTURED_COMMAND_RE = re.compile(r"^(?:oc|kubectl|helm|argocd|podman|docker)\s+\S", re.IGNORECASE)
+CUSTOMER_PACK_QUALITY_CONTRACT_VERSION = "customer_pack_quality_contract_v1"
+CUSTOMER_PACK_BLOCK_MODEL = "document_block_v1"
 
 
 def _customer_pack_asset_slug(draft_id: str, family: str) -> str:
@@ -294,6 +298,69 @@ def build_customer_pack_playable_books(
     return enriched_payload, derived_payloads
 
 
+def attach_customer_pack_quality_contract(
+    payload: dict[str, object],
+    *,
+    parser_evidence: dict[str, object],
+    challenger_payloads: dict[str, dict[str, object]] | None = None,
+    challenger_statuses: dict[str, str] | None = None,
+    challenger_details: dict[str, str] | None = None,
+) -> dict[str, object]:
+    enriched = dict(payload)
+    source_type = str(enriched.get("source_type") or "").strip()
+    sections = _canonical_sections(enriched)
+    block_type_counts: dict[str, int] = {}
+    document_block_count = 0
+    sections_with_document_blocks = 0
+    for section in sections:
+        blocks = [
+            dict(block)
+            for block in (section.get("document_blocks") or [])
+            if isinstance(block, dict)
+        ]
+        if blocks:
+            sections_with_document_blocks += 1
+        for block in blocks:
+            block_type = str(block.get("block_type") or "").strip()
+            if not block_type:
+                continue
+            block_type_counts[block_type] = block_type_counts.get(block_type, 0) + 1
+            document_block_count += 1
+
+    enriched["quality_contract"] = {
+        "contract_version": CUSTOMER_PACK_QUALITY_CONTRACT_VERSION,
+        "truth_owner": "canonical_book_json",
+        "delivery_surface": "html_viewer",
+        "markdown_role": "fallback_or_debug_artifact",
+        "block_model": CUSTOMER_PACK_BLOCK_MODEL,
+        "canonical_model": str(enriched.get("canonical_model") or "").strip(),
+        "source_view_strategy": str(enriched.get("source_view_strategy") or "").strip(),
+        "retrieval_derivation": str(enriched.get("retrieval_derivation") or "").strip(),
+        "section_count": len(sections),
+        "sections_with_document_blocks": sections_with_document_blocks,
+        "document_block_count": document_block_count,
+        "block_type_counts": block_type_counts,
+    }
+    enriched["parser_evidence"] = dict(parser_evidence)
+    enriched["customer_pack_evidence"] = dict(parser_evidence)
+    enriched["parser_challenger_scorecard"] = build_parser_challenger_scorecard(
+        source_type=source_type,
+        primary_payload={
+            **enriched,
+            "parser_evidence": dict(parser_evidence),
+        },
+        challenger_payloads=challenger_payloads,
+        challenger_statuses=challenger_statuses,
+        challenger_details=challenger_details,
+    )
+    enriched["pipeline_stage_strategy"] = build_customer_pack_stage_strategy(source_type)
+    enriched["playbook_grade"] = classify_customer_pack_playbook_grade(
+        enriched,
+        source_type=source_type,
+    )
+    return enriched
+
+
 def evaluate_canonical_book_quality(payload: dict[str, object]) -> dict[str, object]:
     sections = [dict(section) for section in (payload.get("sections") or []) if isinstance(section, dict)]
     if not sections:
@@ -414,6 +481,7 @@ def _looks_like_flattened_structured_section(section: dict[str, Any]) -> bool:
 
 
 __all__ = [
+    "attach_customer_pack_quality_contract",
     "build_customer_pack_playable_books",
     "evaluate_canonical_book_quality",
 ]

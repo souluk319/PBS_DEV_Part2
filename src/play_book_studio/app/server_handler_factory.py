@@ -22,6 +22,7 @@ from play_book_studio.app.server_routes import (
     handle_debug_chat_log as _handle_debug_chat_log_request,
     handle_debug_session as _handle_debug_session_request,
     handle_customer_pack_book as _handle_customer_pack_book_request,
+    handle_customer_pack_assets as _handle_customer_pack_assets_request,
     handle_buyer_packet as _handle_buyer_packet_request,
     handle_customer_pack_capture as _handle_customer_pack_capture_request,
     handle_customer_pack_captured as _handle_customer_pack_captured_request,
@@ -192,6 +193,9 @@ def _build_handler(
                 return
             if request_path == "/api/customer-packs/book":
                 self._handle_customer_pack_book(parsed_request.query)
+                return
+            if request_path == "/api/customer-packs/assets":
+                self._handle_customer_pack_assets(parsed_request.query)
                 return
             if request_path == "/api/customer-packs/captured":
                 self._handle_customer_pack_captured(parsed_request.query)
@@ -381,6 +385,7 @@ def _build_handler(
         def _handle_customer_pack_support_matrix(self, query: str) -> None: _handle_customer_pack_support_matrix_request(self, query, root_dir=root_dir)
         def _handle_customer_pack_drafts(self, query: str) -> None: _handle_customer_pack_drafts_request(self, query, root_dir=root_dir)
         def _handle_customer_pack_captured(self, query: str) -> None: _handle_customer_pack_captured_request(self, query, root_dir=root_dir)
+        def _handle_customer_pack_assets(self, query: str) -> None: _handle_customer_pack_assets_request(self, query, root_dir=root_dir)
         def _handle_customer_pack_book(self, query: str) -> None: _handle_customer_pack_book_request(self, query, root_dir=root_dir)
         def _handle_customer_pack_draft_create(self, payload: dict[str, Any]) -> None:
             _handle_customer_pack_draft_create_request(self, payload, root_dir=root_dir)

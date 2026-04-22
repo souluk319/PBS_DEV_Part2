@@ -348,6 +348,8 @@ def _default_customer_pack_summary(payload: dict[str, Any]) -> str:
         "md": "text 문서를",
         "asciidoc": "text 문서를",
         "txt": "text 문서를",
+        "hwp": "한글 문서를",
+        "hwpx": "한글 문서를",
     }.get(source_type, "웹 문서를")
     return (
         f"업로드 {source_label} canonical section으로 정리한 내부 review view입니다. "

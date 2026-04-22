@@ -12,7 +12,9 @@ from .models import (
     CanonicalBook,
     CanonicalBookDraft,
     CanonicalSection,
+    DocumentBlock,
     DocSourceRequest,
+    FigureAsset,
     IntakeFormatSupportEntry,
     IntakeOcrMetadata,
     IntakeSupportMatrix,
@@ -31,7 +33,7 @@ def _infer_title(request: DocSourceRequest) -> str:
     if request.title.strip():
         return request.title.strip()
 
-    if request.source_type in {"pdf", "md", "asciidoc", "txt", "docx", "pptx", "xlsx", "image"}:
+    if request.source_type in {"pdf", "md", "asciidoc", "txt", "docx", "pptx", "xlsx", "hwp", "hwpx", "image"}:
         path = PurePosixPath(request.uri.replace("\\", "/"))
         return path.stem or "Uploaded source"
 
@@ -226,11 +228,11 @@ def build_customer_pack_support_matrix() -> IntakeSupportMatrix:
                 source_type="pptx",
                 support_status="supported",
                 capture_strategy="pptx_slide_capture_v1",
-                normalization_strategy="markitdown_markdown_to_canonical_sections_v1",
-                review_rule="MarkItDown markdown 에 슬라이드 제목과 본문 구조가 남는지 확인한다.",
+                normalization_strategy="pptx_native_slide_extract_v1",
+                review_rule="슬라이드 제목, 본문 순서, bullet depth, table, speaker notes 가 slide-native extract 에서 유지되는지 확인한다.",
                 accepted_extensions=(".pptx",),
                 accepted_mime_types=("application/vnd.openxmlformats-officedocument.presentationml.presentation",),
-                notes=("PowerPoint 는 MarkItDown markdown 을 거쳐 canonical book 으로 옮긴다.",),
+                notes=("PowerPoint 는 slide-native extract 로 canonical book rows 를 직접 만든다.",),
             ),
             _support_entry(
                 format_id="xlsx",
@@ -243,6 +245,36 @@ def build_customer_pack_support_matrix() -> IntakeSupportMatrix:
                 accepted_extensions=(".xlsx",),
                 accepted_mime_types=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",),
                 notes=("Excel 은 MarkItDown markdown 을 거쳐 playbook table sections 으로 분해한다.",),
+            ),
+            _support_entry(
+                format_id="hwp",
+                route_label="Hancom HWP",
+                source_type="hwp",
+                support_status="staged",
+                capture_strategy="hwp_binary_capture_v1",
+                normalization_strategy="unhwp_structured_extract_v1",
+                review_rule="unhwp extraction 을 우선 사용하고, embedded scan/bitmap block 은 후속 hybrid OCR lane 으로 넘긴다.",
+                accepted_extensions=(".hwp",),
+                accepted_mime_types=("application/x-hwp", "application/haansofthwp"),
+                notes=(
+                    "HWP 는 unhwp 기반 structured extraction 을 우선 사용한다.",
+                    "현재 단계에서는 fixture validation 전이므로 staged 로 유지한다.",
+                ),
+            ),
+            _support_entry(
+                format_id="hwpx",
+                route_label="Hancom HWPX",
+                source_type="hwpx",
+                support_status="staged",
+                capture_strategy="hwpx_zip_capture_v1",
+                normalization_strategy="unhwp_structured_extract_v1",
+                review_rule="unhwp extraction 을 우선 사용하고, embedded scan/bitmap block 은 후속 hybrid OCR lane 으로 넘긴다.",
+                accepted_extensions=(".hwpx",),
+                accepted_mime_types=("application/x-hwpx", "application/zip"),
+                notes=(
+                    "HWPX 는 unhwp 기반 structured extraction 을 우선 사용한다.",
+                    "현재 단계에서는 fixture validation 전이므로 staged 로 유지한다.",
+                ),
             ),
             _support_entry(
                 format_id="image_ocr",
@@ -326,12 +358,16 @@ def _resolve_binary_capture(request: DocSourceRequest) -> tuple[str, str, str, t
         "docx": "docx_structured_capture_v1",
         "pptx": "pptx_slide_capture_v1",
         "xlsx": "xlsx_sheet_capture_v1",
+        "hwp": "hwp_binary_capture_v1",
+        "hwpx": "hwpx_zip_capture_v1",
         "image": "image_ocr_capture_v1",
     }[request.source_type]
     source_label = {
         "docx": "Word",
         "pptx": "PowerPoint",
         "xlsx": "Excel",
+        "hwp": "Hancom HWP",
+        "hwpx": "Hancom HWPX",
         "image": "Image",
     }[request.source_type]
     return (
@@ -354,6 +390,210 @@ def _detect_block_kinds(text: str) -> tuple[str, ...]:
         kinds.append("code")
     if "[TABLE" in normalized and "[/TABLE]" in normalized:
         kinds.append("table")
+    if "[FIGURE" in normalized and "[/FIGURE]" in normalized:
+        kinds.append("figure")
+    return tuple(kinds)
+
+
+_TAGGED_BLOCK_END_MARKERS = {
+    "CODE": "[/CODE]",
+    "TABLE": "[/TABLE]",
+    "FIGURE": "[/FIGURE]",
+}
+_LIST_ITEM_RE = re.compile(r"^(?:[-*]\s+|\d+\.\s+|[A-Za-z]\)\s+)")
+_MARKER_ATTR_RE = re.compile(r'([a-z_]+)="((?:[^"\\]|\\.)*)"')
+
+
+def _document_block_id(section_key: str, block_ordinal: int) -> str:
+    return f"{section_key}:block-{block_ordinal:02d}"
+
+
+def _append_document_block(
+    blocks: list[DocumentBlock],
+    *,
+    section_key: str,
+    block_type: str,
+    text: str,
+    block_ordinal: int,
+    source_page_or_slide: str,
+    hierarchy_hint: str,
+    table_html_or_cells: str = "",
+    figure_asset_ref: str = "",
+    confidence: float = 0.0,
+) -> int:
+    normalized = str(text or "").strip()
+    if not normalized and not str(figure_asset_ref or "").strip():
+        return block_ordinal
+    blocks.append(
+        DocumentBlock(
+            block_id=_document_block_id(section_key, block_ordinal),
+            block_type=block_type,  # type: ignore[arg-type]
+            text=normalized,
+            source_page_or_slide=source_page_or_slide,
+            order_key=f"{source_page_or_slide}:{block_ordinal:02d}",
+            hierarchy_hint=hierarchy_hint,
+            table_html_or_cells=table_html_or_cells,
+            figure_asset_ref=str(figure_asset_ref or "").strip(),
+            confidence=confidence,
+        )
+    )
+    return block_ordinal + 1
+
+
+def _parse_marker_attrs(text: str) -> dict[str, str]:
+    attrs: dict[str, str] = {}
+    for key, value in _MARKER_ATTR_RE.findall(text or ""):
+        attrs[key.strip().lower()] = value.replace('\\"', '"').replace("\\\\", "\\").strip()
+    return attrs
+
+
+def _section_document_blocks(
+    *,
+    section_key: str,
+    heading: str,
+    section_level: int,
+    section_text: str,
+    source_page_or_slide: str,
+) -> tuple[DocumentBlock, ...]:
+    blocks: list[DocumentBlock] = []
+    block_ordinal = 1
+    block_ordinal = _append_document_block(
+        blocks,
+        section_key=section_key,
+        block_type="heading",
+        text=heading,
+        block_ordinal=block_ordinal,
+        source_page_or_slide=source_page_or_slide,
+        hierarchy_hint=f"h{max(section_level, 1)}",
+        confidence=0.95,
+    )
+
+    buffered_lines: list[str] = []
+    buffered_kind = "paragraph"
+    active_tag = ""
+    active_tag_attrs: dict[str, str] = {}
+    active_tag_lines: list[str] = []
+
+    def flush_buffer() -> None:
+        nonlocal block_ordinal, buffered_lines, buffered_kind
+        if not buffered_lines:
+            return
+        text = "\n".join(buffered_lines).strip()
+        if not text:
+            buffered_lines = []
+            buffered_kind = "paragraph"
+            return
+        kind = buffered_kind
+        hint = "body"
+        confidence = 0.78
+        if kind == "list_item":
+            hint = "list-depth:1"
+            confidence = 0.86
+        elif kind == "note":
+            hint = "note"
+            confidence = 0.82
+        block_ordinal = _append_document_block(
+            blocks,
+            section_key=section_key,
+            block_type=kind,
+            text=text,
+            block_ordinal=block_ordinal,
+            source_page_or_slide=source_page_or_slide,
+            hierarchy_hint=hint,
+            confidence=confidence,
+        )
+        buffered_lines = []
+        buffered_kind = "paragraph"
+
+    for line in str(section_text or "").splitlines():
+        stripped = line.strip()
+        upper = stripped.upper()
+        if active_tag:
+            if upper == _TAGGED_BLOCK_END_MARKERS[active_tag]:
+                tagged_text = "\n".join(active_tag_lines).strip()
+                kind = active_tag.lower()
+                figure_asset_ref = ""
+                hierarchy_hint = kind
+                if kind == "figure":
+                    figure_asset_ref = str(active_tag_attrs.get("ref") or "").strip()
+                    tagged_text = tagged_text or str(active_tag_attrs.get("alt") or "").strip()
+                    hierarchy_hint = str(active_tag_attrs.get("placement_hint") or "figure").strip() or "figure"
+                block_ordinal = _append_document_block(
+                    blocks,
+                    section_key=section_key,
+                    block_type=kind,
+                    text=tagged_text,
+                    block_ordinal=block_ordinal,
+                    source_page_or_slide=source_page_or_slide,
+                    hierarchy_hint=hierarchy_hint,
+                    table_html_or_cells=tagged_text if kind == "table" else "",
+                    figure_asset_ref=figure_asset_ref,
+                    confidence=0.92 if kind in {"table", "code"} else 0.88,
+                )
+                active_tag = ""
+                active_tag_attrs = {}
+                active_tag_lines = []
+                continue
+            active_tag_lines.append(line)
+            continue
+
+        if upper.startswith("[CODE"):
+            flush_buffer()
+            active_tag = "CODE"
+            active_tag_attrs = _parse_marker_attrs(stripped)
+            active_tag_lines = []
+            continue
+        if upper.startswith("[TABLE"):
+            flush_buffer()
+            active_tag = "TABLE"
+            active_tag_attrs = _parse_marker_attrs(stripped)
+            active_tag_lines = []
+            continue
+        if upper.startswith("[FIGURE"):
+            flush_buffer()
+            active_tag = "FIGURE"
+            active_tag_attrs = _parse_marker_attrs(stripped)
+            active_tag_lines = []
+            continue
+        if not stripped:
+            flush_buffer()
+            continue
+
+        next_kind = "paragraph"
+        if stripped.lower().startswith("slide notes"):
+            next_kind = "note"
+        elif _LIST_ITEM_RE.match(stripped):
+            next_kind = "list_item"
+        elif buffered_kind == "note" and buffered_lines:
+            next_kind = "note"
+
+        if buffered_lines and next_kind != buffered_kind:
+            flush_buffer()
+        buffered_kind = next_kind
+        buffered_lines.append(line)
+
+    flush_buffer()
+    if active_tag and active_tag_lines:
+        block_ordinal = _append_document_block(
+            blocks,
+            section_key=section_key,
+            block_type="paragraph",
+            text="\n".join(active_tag_lines),
+            block_ordinal=block_ordinal,
+            source_page_or_slide=source_page_or_slide,
+            hierarchy_hint="body",
+            confidence=0.6,
+        )
+    return tuple(blocks)
+
+
+def _document_block_kinds(document_blocks: tuple[DocumentBlock, ...]) -> tuple[str, ...]:
+    kinds: list[str] = []
+    for block in document_blocks:
+        kind = str(block.block_type or "").strip()
+        if not kind or kind == "heading" or kind in kinds:
+            continue
+        kinds.append(kind)
     return tuple(kinds)
 
 
@@ -424,6 +664,7 @@ class CustomerPackPlanner:
         rows: list[dict[str, object]],
         *,
         request: DocSourceRequest | None = None,
+        figure_assets: list[dict[str, object]] | tuple[FigureAsset, ...] | None = None,
     ) -> CanonicalBook:
         if not rows:
             raise ValueError("rows must not be empty")
@@ -444,16 +685,29 @@ class CustomerPackPlanner:
         for ordinal, row in enumerate(rows, start=1):
             heading = str(row.get("heading") or "").strip() or f"Section {ordinal}"
             anchor = str(row.get("anchor") or "").strip()
+            section_key = _section_key(book_slug, anchor, ordinal)
             section_path = tuple(
                 str(item).strip()
                 for item in (row.get("section_path") or [])
                 if str(item).strip()
             )
             section_text = str(row.get("text") or "").strip()
+            source_page_or_slide = str(
+                row.get("source_page_or_slide")
+                or row.get("source_container_ref")
+                or f"section:{ordinal}"
+            ).strip()
+            document_blocks = _section_document_blocks(
+                section_key=section_key,
+                heading=heading,
+                section_level=int(row.get("section_level") or 0),
+                section_text=section_text,
+                source_page_or_slide=source_page_or_slide,
+            )
             sections.append(
                 CanonicalSection(
                     ordinal=ordinal,
-                    section_key=_section_key(book_slug, anchor, ordinal),
+                    section_key=section_key,
                     heading=heading,
                     section_level=int(row.get("section_level") or 0),
                     section_path=section_path,
@@ -462,7 +716,36 @@ class CustomerPackPlanner:
                     viewer_path=str(row.get("viewer_path") or "").strip(),
                     source_url=str(row.get("source_url") or source_uri).strip(),
                     text=section_text,
-                    block_kinds=_detect_block_kinds(section_text),
+                    block_kinds=_document_block_kinds(document_blocks) or _detect_block_kinds(section_text),
+                    document_blocks=document_blocks,
+                )
+            )
+
+        normalized_figure_assets: list[FigureAsset] = []
+        for payload in figure_assets or []:
+            if isinstance(payload, FigureAsset):
+                normalized_figure_assets.append(payload)
+                continue
+            if not isinstance(payload, dict):
+                continue
+            asset_ref = str(payload.get("asset_ref") or payload.get("asset_name") or "").strip()
+            if not asset_ref:
+                continue
+            normalized_figure_assets.append(
+                FigureAsset(
+                    asset_ref=asset_ref,
+                    content_type=str(payload.get("content_type") or "application/octet-stream").strip()
+                    or "application/octet-stream",
+                    source_page_or_slide=str(payload.get("source_page_or_slide") or "").strip(),
+                    placement_hint=str(payload.get("placement_hint") or "").strip(),
+                    caption=str(payload.get("caption") or "").strip(),
+                    alt=str(payload.get("alt") or "").strip(),
+                    figure_type=str(payload.get("figure_type") or "image").strip() or "image",
+                    asset_name=str(payload.get("asset_name") or asset_ref).strip() or asset_ref,
+                    width_px=int(payload.get("width_px") or 0),
+                    height_px=int(payload.get("height_px") or 0),
+                    nearby_text=str(payload.get("nearby_text") or "").strip(),
+                    asset_url=str(payload.get("asset_url") or "").strip(),
                 )
             )
 
@@ -481,6 +764,7 @@ class CustomerPackPlanner:
             source_view_strategy="normalized_sections_v1",
             retrieval_derivation=draft.retrieval_derivation,
             sections=tuple(sections),
+            figure_assets=tuple(normalized_figure_assets),
             notes=draft.notes,
         )
 

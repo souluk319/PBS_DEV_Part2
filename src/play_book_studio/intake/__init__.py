@@ -12,6 +12,16 @@ from .models import (
     IntakeSupportMatrix,
     CustomerPackDraftRecord,
 )
+from .grade_ladder import (
+    build_customer_pack_stage_strategy,
+    classify_customer_pack_playbook_grade,
+)
+from .parser_harness import (
+    build_parser_challenger_scorecard,
+    parser_candidates_for_family,
+    parser_candidates_for_source_type,
+    parser_family_for_source_type,
+)
 from .planner import CustomerPackPlanner, build_customer_pack_support_matrix
 
 __all__ = [
@@ -22,10 +32,16 @@ __all__ = [
     "CustomerPackDraftRecord",
     "CustomerPackDraftStore",
     "CustomerPackPlanner",
+    "build_customer_pack_stage_strategy",
+    "classify_customer_pack_playbook_grade",
     "IntakeFormatSupportEntry",
     "IntakeOcrMetadata",
     "IntakeSupportMatrix",
+    "build_parser_challenger_scorecard",
     "build_customer_pack_support_matrix",
+    "parser_candidates_for_family",
+    "parser_candidates_for_source_type",
+    "parser_family_for_source_type",
     "resolve_pdf_capture",
     "resolve_web_capture_url",
 ]
