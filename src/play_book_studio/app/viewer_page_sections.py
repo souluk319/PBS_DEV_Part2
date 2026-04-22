@@ -560,6 +560,7 @@ def _build_study_section_cards(
     target_anchor: str = "",
     embedded: bool = False,
     root_dir: Path | None = None,
+    figure_assets_by_ref: dict[str, dict[str, Any]] | None = None,
 ) -> list[str]:
     cards: list[str] = []
     link_candidates = _build_section_link_candidates(sections, book_slug=book_slug)
@@ -589,7 +590,10 @@ def _build_study_section_cards(
                     fragment for fragment in (_render_playbook_block_html(block) for block in blocks) if fragment
                 )
                 if blocks
-                else _render_normalized_section_html(section_text)
+                else _render_normalized_section_html(
+                    section_text,
+                    figure_assets_by_ref=figure_assets_by_ref,
+                )
             )
         )
         if embedded:
@@ -666,10 +670,11 @@ def _build_section_metrics(sections: list[dict[str, Any]]) -> list[str]:
         semantic_role = str(row.get("semantic_role") or "").strip().lower()
         if semantic_role:
             semantic_counts[semantic_role] = semantic_counts.get(semantic_role, 0) + 1
-        for block in row.get("blocks") or []:
+        block_payloads = row.get("blocks") or row.get("document_blocks") or []
+        for block in block_payloads:
             if not isinstance(block, dict):
                 continue
-            kind = str(block.get("kind") or "").strip().lower()
+            kind = str(block.get("kind") or block.get("block_type") or "").strip().lower()
             if kind == "figure":
                 figure_count += 1
             elif kind == "code":

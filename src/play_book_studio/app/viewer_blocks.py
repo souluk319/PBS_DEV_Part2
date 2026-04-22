@@ -52,7 +52,11 @@ ADMONITION_VARIANTS = {
 }
 
 
-def _render_normalized_section_html(text: str) -> str:
+def _render_normalized_section_html(
+    text: str,
+    *,
+    figure_assets_by_ref: dict[str, dict[str, Any]] | None = None,
+) -> str:
     blocks: list[str] = []
     normalized = _normalize_markdown_table_blocks(
         _normalize_markdown_image_blocks(
@@ -165,11 +169,31 @@ def _render_normalized_section_html(text: str) -> str:
         if figure_match:
             flush_paragraph_queue()
             attrs = _parse_marker_attrs(figure_match.group("attrs"))
+            caption = html.unescape(figure_match.group("body").strip())
+            src = str(attrs.get("src") or "").strip()
+            ref = str(attrs.get("ref") or "").strip()
+            figure_asset = (
+                dict((figure_assets_by_ref or {}).get(ref) or {})
+                if ref
+                else {}
+            )
+            if not src:
+                src = str(figure_asset.get("asset_url") or "").strip()
+            if not src:
+                missing_label = html.escape(ref or str(attrs.get("alt") or "").strip() or "figure")
+                blocks.append(
+                    _render_note_card_html(
+                        variant="warning",
+                        title="Figure Asset Missing",
+                        body_html=f"<p>{missing_label}</p>",
+                    )
+                )
+                continue
             blocks.append(
                 _render_figure_block_html(
-                    str(attrs.get("src") or "").strip(),
-                    caption=html.unescape(figure_match.group("body").strip()),
-                    alt=str(attrs.get("alt") or "").strip(),
+                    src,
+                    caption=caption or str(figure_asset.get("caption") or "").strip(),
+                    alt=str(attrs.get("alt") or figure_asset.get("alt") or "").strip(),
                     kind=str(attrs.get("kind") or "").strip(),
                     diagram_type=str(attrs.get("diagram_type") or "").strip(),
                 )

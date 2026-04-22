@@ -6,8 +6,9 @@ from dataclasses import asdict, dataclass, field
 from typing import Literal
 
 
-SourceType = Literal["web", "pdf", "md", "asciidoc", "txt", "docx", "pptx", "xlsx", "image"]
+SourceType = Literal["web", "pdf", "md", "asciidoc", "txt", "docx", "pptx", "xlsx", "hwp", "hwpx", "image"]
 SupportStatus = Literal["supported", "staged", "rejected"]
+DocumentBlockType = Literal["heading", "paragraph", "list_item", "table", "figure", "code", "note"]
 
 
 def _default_private_access_groups(tenant_id: str, workspace_id: str) -> tuple[str, ...]:
@@ -174,6 +175,7 @@ class CanonicalSection:
     source_url: str
     text: str
     block_kinds: tuple[str, ...] = field(default_factory=tuple)
+    document_blocks: tuple["DocumentBlock", ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -188,6 +190,145 @@ class CanonicalSection:
             "source_url": self.source_url,
             "text": self.text,
             "block_kinds": list(self.block_kinds),
+            "document_blocks": [block.to_dict() for block in self.document_blocks],
+        }
+
+
+@dataclass(slots=True)
+class DocumentBlock:
+    block_id: str
+    block_type: DocumentBlockType
+    text: str
+    source_page_or_slide: str = ""
+    order_key: str = ""
+    hierarchy_hint: str = ""
+    table_html_or_cells: str = ""
+    figure_asset_ref: str = ""
+    confidence: float = 0.0
+    parser_backend: str = ""
+    degraded_reasons: tuple[str, ...] = field(default_factory=tuple)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "block_id": self.block_id,
+            "block_type": self.block_type,
+            "text": self.text,
+            "source_page_or_slide": self.source_page_or_slide,
+            "order_key": self.order_key,
+            "hierarchy_hint": self.hierarchy_hint,
+            "table_html_or_cells": self.table_html_or_cells,
+            "figure_asset_ref": self.figure_asset_ref,
+            "confidence": self.confidence,
+            "parser_backend": self.parser_backend,
+            "degraded_reasons": list(self.degraded_reasons),
+        }
+
+
+@dataclass(slots=True)
+class FigureAsset:
+    asset_ref: str
+    content_type: str
+    source_page_or_slide: str = ""
+    placement_hint: str = ""
+    caption: str = ""
+    alt: str = ""
+    figure_type: str = "image"
+    asset_name: str = ""
+    width_px: int = 0
+    height_px: int = 0
+    nearby_text: str = ""
+    asset_url: str = ""
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "asset_ref": self.asset_ref,
+            "content_type": self.content_type,
+            "source_page_or_slide": self.source_page_or_slide,
+            "placement_hint": self.placement_hint,
+            "caption": self.caption,
+            "alt": self.alt,
+            "figure_type": self.figure_type,
+            "asset_name": self.asset_name or self.asset_ref,
+            "width_px": self.width_px,
+            "height_px": self.height_px,
+            "nearby_text": self.nearby_text,
+            "asset_url": self.asset_url,
+        }
+
+
+@dataclass(slots=True)
+class CustomerPackParserEvidence:
+    source_type: str
+    source_lane: str
+    source_ref: str
+    source_fingerprint: str
+    parser_route: str
+    parser_backend: str
+    parser_version: str
+    primary_parse_strategy: str
+    truth_owner: str = "canonical_book_json"
+    delivery_surface: str = "html_viewer"
+    markdown_role: str = "fallback_or_debug_artifact"
+    block_model: str = "document_block_v1"
+    contract_version: str = "customer_pack_parser_evidence_v1"
+    ocr_used: bool = False
+    extraction_confidence: float = 0.0
+    quality_status: str = ""
+    quality_score: int = 0
+    quality_flags: tuple[str, ...] = field(default_factory=tuple)
+    quality_summary: str = ""
+    degraded_pdf: bool = False
+    degraded_reasons: tuple[str, ...] = field(default_factory=tuple)
+    degraded_reason: str = ""
+    fallback_used: bool = False
+    fallback_backend: str = ""
+    fallback_status: str = ""
+    fallback_reason: str = ""
+    tenant_id: str = ""
+    workspace_id: str = ""
+    pack_id: str = ""
+    pack_version: str = ""
+    approval_state: str = ""
+    publication_state: str = ""
+    canonical_book_path: str = ""
+    normalization_notes: tuple[str, ...] = field(default_factory=tuple)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "contract_version": self.contract_version,
+            "truth_owner": self.truth_owner,
+            "delivery_surface": self.delivery_surface,
+            "markdown_role": self.markdown_role,
+            "block_model": self.block_model,
+            "source_type": self.source_type,
+            "source_lane": self.source_lane,
+            "source_ref": self.source_ref,
+            "source_fingerprint": self.source_fingerprint,
+            "parser_route": self.parser_route,
+            "parser_backend": self.parser_backend,
+            "parser_version": self.parser_version,
+            "primary_parse_strategy": self.primary_parse_strategy,
+            "ocr_used": self.ocr_used,
+            "extraction_confidence": self.extraction_confidence,
+            "quality_status": self.quality_status,
+            "quality_score": self.quality_score,
+            "quality_flags": list(self.quality_flags),
+            "quality_summary": self.quality_summary,
+            "degraded_pdf": self.degraded_pdf,
+            "degraded_reasons": list(self.degraded_reasons),
+            "degraded_reason": self.degraded_reason,
+            "fallback_used": self.fallback_used,
+            "fallback_backend": self.fallback_backend,
+            "fallback_status": self.fallback_status,
+            "fallback_reason": self.fallback_reason,
+            "tenant_id": self.tenant_id,
+            "workspace_id": self.workspace_id,
+            "pack_id": self.pack_id,
+            "pack_version": self.pack_version,
+            "approval_state": self.approval_state,
+            "publication_state": self.publication_state,
+            "canonical_book_path": self.canonical_book_path,
+            "normalization_notes": list(self.normalization_notes),
         }
 
 
@@ -207,6 +348,7 @@ class CanonicalBook:
     source_view_strategy: str
     retrieval_derivation: str
     sections: tuple[CanonicalSection, ...] = field(default_factory=tuple)
+    figure_assets: tuple[FigureAsset, ...] = field(default_factory=tuple)
     notes: tuple[str, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict[str, object]:
@@ -225,6 +367,7 @@ class CanonicalBook:
             "source_view_strategy": self.source_view_strategy,
             "retrieval_derivation": self.retrieval_derivation,
             "sections": [section.to_dict() for section in self.sections],
+            "figure_assets": [asset.to_dict() for asset in self.figure_assets],
             "notes": list(self.notes),
         }
 

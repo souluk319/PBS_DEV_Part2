@@ -9,7 +9,7 @@ except Exception:  # noqa: BLE001
     MarkItDown = None
 
 
-MARKITDOWN_SOURCE_TYPES = frozenset({"pdf", "docx", "pptx", "xlsx"})
+MARKITDOWN_SOURCE_TYPES = frozenset({"pdf", "docx", "xlsx"})
 
 
 @lru_cache(maxsize=1)

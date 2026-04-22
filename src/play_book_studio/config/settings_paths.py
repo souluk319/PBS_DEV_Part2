@@ -161,6 +161,10 @@ class SettingsPathMixin:
         return self.customer_packs_dir / "books"
 
     @property
+    def customer_pack_assets_dir(self) -> Path:
+        return self.customer_packs_dir / "assets"
+
+    @property
     def customer_pack_corpus_dir(self) -> Path:
         return self.customer_packs_dir / "corpus"
 

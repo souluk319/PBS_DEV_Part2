@@ -1260,13 +1260,13 @@ class AppViewersTestSupport(unittest.TestCase):
                     ],
                     "viewer_path": "/wiki/figures/overview/oke-about-ocp-stack-image.png/index.html",
                     "source_url": "/playbooks/wiki-assets/full_rebuild/overview/oke-about-ocp-stack-image.png",
-                    "boundary_truth": "official_candidate_runtime",
-                    "runtime_truth_label": "Source-First Candidate Figure",
-                    "source_lane": "official_source_first_candidate",
-                    "approval_state": "",
+                    "boundary_truth": "official_gold_playbook_runtime",
+                    "runtime_truth_label": "Gold Playbook Figure",
+                    "source_lane": "applied_playbook",
+                    "approval_state": "approved",
                     "publication_state": "published",
                     "parser_backend": "render_bound_markdown",
-                    "boundary_badge": "Source-First Candidate",
+                    "boundary_badge": "Gold Playbook",
                 },
             ),
             (
@@ -1300,13 +1300,13 @@ class AppViewersTestSupport(unittest.TestCase):
                     ],
                     "viewer_path": "/wiki/figures/overview/oke-about-ocp-stack-image.png/index.html",
                     "source_url": "/playbooks/wiki-assets/full_rebuild/overview/oke-about-ocp-stack-image.png",
-                    "boundary_truth": "official_candidate_runtime",
-                    "runtime_truth_label": "Source-First Candidate Figure",
-                    "source_lane": "official_source_first_candidate",
-                    "approval_state": "",
+                    "boundary_truth": "official_gold_playbook_runtime",
+                    "runtime_truth_label": "Gold Playbook Figure",
+                    "source_lane": "applied_playbook",
+                    "approval_state": "approved",
                     "publication_state": "published",
                     "parser_backend": "render_bound_markdown",
-                    "boundary_badge": "Source-First Candidate",
+                    "boundary_badge": "Gold Playbook",
                 },
             ),
         ]
@@ -1435,9 +1435,9 @@ class AppViewersTestSupport(unittest.TestCase):
             runtime_dir.mkdir(parents=True, exist_ok=True)
             markdown_path = runtime_dir / "monitoring.md"
             markdown_path.write_text(
-                (ROOT / "data" / "wiki_runtime_books" / "full_rebuild" / "monitoring.md").read_text(
-                    encoding="utf-8"
-                ),
+                "# Monitoring\n\n"
+                "OpenShift Container Platform includes a preconfigured,\n"
+                "self-updating monitoring stack for your cluster.\n",
                 encoding="utf-8",
             )
 

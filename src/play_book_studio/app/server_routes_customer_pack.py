@@ -18,6 +18,7 @@ from play_book_studio.app.intake_api import (
     create_customer_pack_draft as _create_customer_pack_draft,
     delete_customer_pack_draft as _delete_customer_pack_draft,
     ingest_customer_pack as _ingest_customer_pack,
+    load_customer_pack_asset as _load_customer_pack_asset,
     load_customer_pack_capture as _load_customer_pack_capture,
     load_customer_pack_draft as _load_customer_pack_draft,
     normalize_customer_pack_draft as _normalize_customer_pack_draft,
@@ -92,6 +93,24 @@ def handle_customer_pack_captured(handler: Any, query: str, *, root_dir: Path) -
         handler._send_json({"error": "captured artifact를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
         return
     body, content_type = capture
+    handler._send_bytes(body, content_type=content_type)
+
+
+def handle_customer_pack_assets(handler: Any, query: str, *, root_dir: Path) -> None:
+    params = parse_qs(query, keep_blank_values=False)
+    draft_id = str((params.get("draft_id") or [""])[0]).strip()
+    asset_ref = str((params.get("asset_ref") or [""])[0]).strip()
+    if not draft_id or not asset_ref:
+        handler._send_json({"error": "draft_id와 asset_ref가 필요합니다."}, HTTPStatus.BAD_REQUEST)
+        return
+    if not _customer_pack_read_allowed(root_dir, draft_id):
+        _send_customer_pack_read_blocked(handler)
+        return
+    asset = _load_customer_pack_asset(root_dir, draft_id, asset_ref)
+    if asset is None:
+        handler._send_json({"error": "customer pack asset를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
+        return
+    body, content_type = asset
     handler._send_bytes(body, content_type=content_type)
 
 
@@ -208,6 +227,7 @@ __all__ = [
     "_customer_pack_read_allowed",
     "_send_customer_pack_read_blocked",
     "handle_customer_pack_book",
+    "handle_customer_pack_assets",
     "handle_customer_pack_capture",
     "handle_customer_pack_captured",
     "handle_customer_pack_delete_draft",
